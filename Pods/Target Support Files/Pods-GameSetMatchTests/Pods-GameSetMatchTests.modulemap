@@ -1,0 +1,6 @@
+framework module Pods_GameSetMatchTests {
+  umbrella header "Pods-GameSetMatchTests-umbrella.h"
+
+  export *
+  module * { export * }
+}

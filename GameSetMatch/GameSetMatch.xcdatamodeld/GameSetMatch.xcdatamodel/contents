@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22757" systemVersion="23C71" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Game" representedClassName=".Game" syncable="YES">
+        <attribute name="isTieBreak" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <relationship name="inverseMatchSet" maxCount="1" deletionRule="Nullify" destinationEntity="MatchSet" inverseName="games" inverseEntity="MatchSet"/>
+        <relationship name="nextGame" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Game" inverseName="previousGame" inverseEntity="Game"/>
+        <relationship name="points" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="GamePoint" inverseName="game" inverseEntity="GamePoint"/>
+        <relationship name="previousGame" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Game" inverseName="nextGame" inverseEntity="Game"/>
+        <relationship name="winner" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Team" inverseName="wonGames" inverseEntity="Team"/>
+    </entity>
+    <entity name="GamePoint" representedClassName=".GamePoint" syncable="YES">
+        <relationship name="game" maxCount="1" deletionRule="Nullify" destinationEntity="Game" inverseName="points" inverseEntity="Game"/>
+        <relationship name="nextPoint" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="GamePoint" inverseName="previousPoint" inverseEntity="GamePoint"/>
+        <relationship name="previousPoint" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="GamePoint" inverseName="nextPoint" inverseEntity="GamePoint"/>
+        <relationship name="servedBy" maxCount="1" deletionRule="Nullify" destinationEntity="Player" inverseName="servedPoints" inverseEntity="Player"/>
+        <relationship name="winner" maxCount="1" deletionRule="Nullify" destinationEntity="Team" inverseName="wonPoints" inverseEntity="Team"/>
+    </entity>
+    <entity name="Match" representedClassName=".Match" syncable="YES">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="isActive" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isOver" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <relationship name="rule" maxCount="1" deletionRule="Cascade" destinationEntity="Rule" inverseName="matches" inverseEntity="Rule"/>
+        <relationship name="sets" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="MatchSet" inverseName="match" inverseEntity="MatchSet"/>
+        <relationship name="teams" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="Team" inverseName="match" inverseEntity="Team"/>
+        <relationship name="winner" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Team" inverseName="wonMatch" inverseEntity="Team"/>
+    </entity>
+    <entity name="MatchSet" representedClassName=".MatchSet" syncable="YES">
+        <relationship name="games" optional="YES" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="Game" inverseName="inverseMatchSet" inverseEntity="Game"/>
+        <relationship name="match" maxCount="1" deletionRule="Nullify" destinationEntity="Match" inverseName="sets" inverseEntity="Match"/>
+        <relationship name="nextSet" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="MatchSet" inverseName="previousSet" inverseEntity="MatchSet"/>
+        <relationship name="previousSet" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="MatchSet" inverseName="nextSet" inverseEntity="MatchSet"/>
+        <relationship name="winner" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Team" inverseName="wonSets" inverseEntity="Team"/>
+    </entity>
+    <entity name="Player" representedClassName=".Player" syncable="YES">
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <attribute name="shortName" attributeType="String" defaultValueString=""/>
+        <relationship name="servedPoints" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="GamePoint" inverseName="servedBy" inverseEntity="GamePoint"/>
+        <relationship name="team" maxCount="1" deletionRule="Nullify" destinationEntity="Team" inverseName="players" inverseEntity="Team"/>
+    </entity>
+    <entity name="Rule" representedClassName=".Rule" syncable="YES">
+        <attribute name="duration" attributeType="Integer 32" defaultValueString="3" usesScalarValueType="YES"/>
+        <attribute name="gameTieBreak" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="name" attributeType="String" defaultValueString=""/>
+        <attribute name="playMode" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="tieBreak" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="matches" toMany="YES" deletionRule="Nullify" destinationEntity="Match" inverseName="rule" inverseEntity="Match"/>
+    </entity>
+    <entity name="Team" representedClassName=".Team" syncable="YES">
+        <attribute name="finalScore" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="match" maxCount="1" deletionRule="Nullify" destinationEntity="Match" inverseName="teams" inverseEntity="Match"/>
+        <relationship name="players" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="Player" inverseName="team" inverseEntity="Player"/>
+        <relationship name="wonGames" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="Game" inverseName="winner" inverseEntity="Game"/>
+        <relationship name="wonMatch" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Match" inverseName="winner" inverseEntity="Match"/>
+        <relationship name="wonPoints" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="GamePoint" inverseName="winner" inverseEntity="GamePoint"/>
+        <relationship name="wonSets" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="MatchSet" inverseName="winner" inverseEntity="MatchSet"/>
+    </entity>
+</model>

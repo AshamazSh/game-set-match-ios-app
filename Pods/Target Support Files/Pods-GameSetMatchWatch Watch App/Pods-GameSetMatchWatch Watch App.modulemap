@@ -1,0 +1,6 @@
+module Pods_GameSetMatchWatch_Watch_App {
+  umbrella header "Pods-GameSetMatchWatch Watch App-umbrella.h"
+
+  export *
+  module * { export * }
+}
