@@ -51,7 +51,6 @@ struct PersistenceController {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
         })
-        print(container.persistentStoreCoordinator.persistentStores.first?.url)
         container.viewContext.automaticallyMergesChangesFromParent = true
     }
 }

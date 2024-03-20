@@ -13,7 +13,7 @@
     "_billingIssuesEnabled" : true,
     "_developerTeamID" : "D9E562H7JV",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 732360712.78394997,
+    "_lastSynchronizedDate" : 732584549.50477695,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [
@@ -84,19 +84,19 @@
           "groupNumber" : 1,
           "internalID" : "6479574943",
           "introductoryOffer" : {
-            "internalID" : "2182B351",
+            "internalID" : "849BC0BC",
             "numberOfPeriods" : 1,
             "paymentMode" : "free",
             "subscriptionPeriod" : "P1W"
           },
           "localizations" : [
             {
-              "description" : "Customizable Match and Access to History",
+              "description" : "1-year. Configure your match and see history",
               "displayName" : "Annual Access",
               "locale" : "en_US"
             },
             {
-              "description" : "Настройка матча и доступ к истории",
+              "description" : "1-год, доступ к настройкам матчей и истории",
               "displayName" : "Годовой доступ",
               "locale" : "ru"
             }
@@ -119,19 +119,19 @@
           "groupNumber" : 2,
           "internalID" : "6479574784",
           "introductoryOffer" : {
-            "internalID" : "A063B426",
+            "internalID" : "51A1765B",
             "numberOfPeriods" : 1,
             "paymentMode" : "free",
             "subscriptionPeriod" : "P1W"
           },
           "localizations" : [
             {
-              "description" : "Customizable Match & Access to History",
+              "description" : "1-month. Configure your match and see history",
               "displayName" : "Monthly Access",
               "locale" : "en_US"
             },
             {
-              "description" : "Настройка матча и доступ к истории",
+              "description" : "1-месяц, доступ к настройкам матчей и истории",
               "displayName" : "Месячный доступ",
               "locale" : "ru"
             }

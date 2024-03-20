@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "many_balls.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
