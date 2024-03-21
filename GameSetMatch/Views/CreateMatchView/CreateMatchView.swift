@@ -218,7 +218,7 @@ struct CreateMatchView: View {
             .blur(radius: customRule.matchType == .custom && !isSubscribed ? 4 : 0)
 
             if customRule.matchType == .custom && !isSubscribed {
-                Button("Subscribe to Ace Access to set your own rules") {
+                Button("Subscribe to Pro Features to set your own rules") {
                     showSubscriptionView.toggle()
                 }
                 .buttonStyle(.bordered)

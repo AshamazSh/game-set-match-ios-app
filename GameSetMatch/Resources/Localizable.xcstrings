@@ -11,16 +11,6 @@
         }
       }
     },
-    "Ace Access" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ace Access"
-          }
-        }
-      }
-    },
     "Clear" : {
       "localizations" : {
         "ru" : {
@@ -290,6 +280,16 @@
         }
       }
     },
+    "Pro Features" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro Функционал"
+          }
+        }
+      }
+    },
     "Quit" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -333,22 +333,22 @@
         }
       }
     },
-    "Subscribe to Ace Access to see all matches history" : {
+    "Subscribe to Pro Features to see all matches history" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Подписаться на Ace Access для доступа к истории"
+            "value" : "Подписаться на Pro функционал для доступа к истории"
           }
         }
       }
     },
-    "Subscribe to Ace Access to set your own rules" : {
+    "Subscribe to Pro Features to set your own rules" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Подписаться на Ace Access для настройки правил"
+            "value" : "Подписаться на Pro функционал для настройки правил"
           }
         }
       }

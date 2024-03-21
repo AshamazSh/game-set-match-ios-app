@@ -13,7 +13,7 @@
     "_billingIssuesEnabled" : true,
     "_developerTeamID" : "D9E562H7JV",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 732584549.50477695,
+    "_lastSynchronizedDate" : 732704979.37199199,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [
@@ -81,22 +81,22 @@
           ],
           "displayPrice" : "9.99",
           "familyShareable" : false,
-          "groupNumber" : 1,
+          "groupNumber" : 2,
           "internalID" : "6479574943",
           "introductoryOffer" : {
-            "internalID" : "849BC0BC",
+            "internalID" : "643A683E",
             "numberOfPeriods" : 1,
             "paymentMode" : "free",
             "subscriptionPeriod" : "P1W"
           },
           "localizations" : [
             {
-              "description" : "1-year. Configure your match and see history",
+              "description" : "1-year access to Pro features",
               "displayName" : "Annual Access",
               "locale" : "en_US"
             },
             {
-              "description" : "1-год, доступ к настройкам матчей и истории",
+              "description" : "1 год доступа к Pro функционалу",
               "displayName" : "Годовой доступ",
               "locale" : "ru"
             }
@@ -116,22 +116,22 @@
           ],
           "displayPrice" : "0.99",
           "familyShareable" : false,
-          "groupNumber" : 2,
+          "groupNumber" : 1,
           "internalID" : "6479574784",
           "introductoryOffer" : {
-            "internalID" : "51A1765B",
+            "internalID" : "943168F7",
             "numberOfPeriods" : 1,
             "paymentMode" : "free",
             "subscriptionPeriod" : "P1W"
           },
           "localizations" : [
             {
-              "description" : "1-month. Configure your match and see history",
+              "description" : "1-month access to Pro features",
               "displayName" : "Monthly Access",
               "locale" : "en_US"
             },
             {
-              "description" : "1-месяц, доступ к настройкам матчей и истории",
+              "description" : "1 месяц доступа к Pro функционалу",
               "displayName" : "Месячный доступ",
               "locale" : "ru"
             }
