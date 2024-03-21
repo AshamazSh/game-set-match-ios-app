@@ -21,6 +21,9 @@
         }
       }
     },
+    "Add new..." : {
+
+    },
     "Clear" : {
       "localizations" : {
         "ru" : {
@@ -96,6 +99,9 @@
         }
       }
     },
+    "Full name" : {
+
+    },
     "Game" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -161,6 +167,9 @@
           }
         }
       }
+    },
+    "New player" : {
+
     },
     "New tennis 2x2 match" : {
       "extractionState" : "manual",
@@ -310,6 +319,9 @@
           }
         }
       }
+    },
+    "Select player" : {
+
     },
     "Sets:" : {
       "extractionState" : "manual",

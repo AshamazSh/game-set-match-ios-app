@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# Following script is to sort Xcode project files, and add them back to version control.
+# The reason to sort project file is that it can reduce project.pbxproj file merging conflict possibility.
+#
+echo 'Sorting Xcode project files'
+
+GIT_ROOT=$(git rev-parse --show-toplevel)
+sorter="$GIT_ROOT/utils/XcodeProjSorter/0.3.0/bin/xcodeproj-sorter"
+modifiedProjectFiles=( $(git diff --name-only --cached | grep "project.pbxproj") )
+for filePath in ${modifiedProjectFiles[@]}; do
+  fullFilePath="$GIT_ROOT/$filePath"
+  fullFilePath=${fullFilePath%"project.pbxproj"}
+  $sorter --case-insensitive --numeric $fullFilePath
+  git add $fullFilePath
+done
+echo 'Done sorting Xcode project files'
+
+modifiedSourceFiles=( $(git diff --name-only --cached | grep -v "BRAssets.swift" | grep ".swift") )
+for filePath in ${modifiedSourceFiles[@]}; do
+  fullFilePath="$GIT_ROOT/$filePath"
+  gtimeout 1 swiftlint --fix --format "$fullFilePath"
+  git add $fullFilePath
+done
+echo 'Done swiftlint indents'
+
+exit 0

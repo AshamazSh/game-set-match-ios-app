@@ -11,18 +11,13 @@ import StoreKit
 import Combine
 
 class TeamInfo: ObservableObject {
-    @Published var firstPlayerName: String = "Player A"
-    @Published var firstPlayerShortName: String = "PLA"
-    @Published var secondPlayerName: String = "Player B"
-    @Published var secondPlayerShortName: String = "PLB"
+    @Published var firstPlayer: MatchPlayer = .playerA
+    @Published var secondPlayer: MatchPlayer = .playerB
     
     func isValid(for type: MatchType, customRule: CustomRule) -> Bool {
         switch type {
-        case .tennis:
-            return !firstPlayerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !firstPlayerShortName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .tennis2x2, .padel:
-            return !firstPlayerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !firstPlayerShortName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            !secondPlayerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !secondPlayerShortName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .tennis, .tennis2x2, .padel:
+            return true
         case .custom:
             switch customRule.playMode {
             case .single:
@@ -34,8 +29,7 @@ class TeamInfo: ObservableObject {
     }
     
     func players() -> [MatchPlayer] {
-        return [MatchPlayer(name: firstPlayerName.trimmingCharacters(in: .whitespacesAndNewlines), shortName: firstPlayerShortName.trimmingCharacters(in: .whitespacesAndNewlines)),
-                MatchPlayer(name: secondPlayerName.trimmingCharacters(in: .whitespacesAndNewlines), shortName: secondPlayerShortName.trimmingCharacters(in: .whitespacesAndNewlines))]
+        return [firstPlayer, secondPlayer]
     }
 }
 
@@ -154,12 +148,23 @@ class CustomRule: ObservableObject {
 }
 
 struct CreateMatchView: View {
+    private enum SelectedPlayer: Identifiable, Hashable {
+        var id: Self { self }
+
+        case team1player1
+        case team1player2
+        case team2player1
+        case team2player2
+    }
+    
     @EnvironmentObject private var coreDataManager: CoreDataManager
     @ObservedObject private var team1: TeamInfo = TeamInfo()
     @ObservedObject private var team2: TeamInfo = TeamInfo()
     @ObservedObject private var customRule: CustomRule = CustomRule()
     @State private var isSubscribed: Bool = false
     @State private var showSubscriptionView = false
+    @State private var showCreateNewPlayer: Bool = false
+    @State private var selectedPlayer: SelectedPlayer? = nil
     private var isValid: Bool {
         if !isSubscribed && customRule.matchType == .custom {
             return false
@@ -247,31 +252,49 @@ struct CreateMatchView: View {
                     matchTypeDescription
                     if isSingleMatch {
                         Section("Player 1") {
-                            TextField("Player name", text: $team1.firstPlayerName)
-                            TextField("Short name", text: $team1.firstPlayerShortName)
-                                .textInputAutocapitalization(.characters)
+                            Button {
+                                selectedPlayer = .team1player1
+                            } label: {
+                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team1.firstPlayer))
+                            }
+                            .foregroundStyle(.primary)
                         }
                         Section("Player 2") {
-                            TextField("Player name", text: $team2.secondPlayerName)
-                            TextField("Short name", text: $team2.secondPlayerShortName)
-                                .textInputAutocapitalization(.characters)
+                            Button {
+                                selectedPlayer = .team2player2
+                            } label: {
+                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team2.secondPlayer))
+                            }
+                            .foregroundStyle(.primary)
                         }
                     } else {
                         Section("Team 1") {
-                            TextField("Player 1", text: $team1.firstPlayerName)
-                            TextField("Short name", text: $team1.firstPlayerShortName)
-                                .textInputAutocapitalization(.characters)
-                            TextField("Player 2", text: $team1.secondPlayerName)
-                            TextField("Short name", text: $team1.secondPlayerShortName)
-                                .textInputAutocapitalization(.characters)
+                            Button {
+                                selectedPlayer = .team1player1
+                            } label: {
+                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team1.firstPlayer))
+                            }
+                            .foregroundStyle(.primary)
+                            Button {
+                                selectedPlayer = .team1player2
+                            } label: {
+                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team1.secondPlayer))
+                            }
+                            .foregroundStyle(.primary)
                         }
                         Section("Team 2") {
-                            TextField("Player 1", text: $team2.firstPlayerName)
-                            TextField("Short name", text: $team2.firstPlayerShortName)
-                                .textInputAutocapitalization(.characters)
-                            TextField("Player 2", text: $team2.secondPlayerName)
-                            TextField("Short name", text: $team2.secondPlayerShortName)
-                                .textInputAutocapitalization(.characters)
+                            Button {
+                                selectedPlayer = .team2player1
+                            } label: {
+                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team2.firstPlayer))
+                            }
+                            .foregroundStyle(.primary)
+                            Button {
+                                selectedPlayer = .team2player2
+                            } label: {
+                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team2.secondPlayer))
+                            }
+                            .foregroundStyle(.primary)
                         }
                     }
                 }
@@ -290,9 +313,34 @@ struct CreateMatchView: View {
                 .buttonStyle(.borderedProminent)
                 .padding()
             }
+            .background(Color(UIColor.systemGroupedBackground))
             .navigationTitle("Create new match")
             .sheet(isPresented: $showSubscriptionView) {
                 SubscriptionView()
+            }
+            .sheet(isPresented: $showCreateNewPlayer) {
+                switch selectedPlayer {
+                case .team1player2:
+                    CreatePlayerView(newPlayer: $team1.secondPlayer)
+                case .team2player1:
+                    CreatePlayerView(newPlayer: $team2.firstPlayer)
+                case .team2player2:
+                    CreatePlayerView(newPlayer: $team2.secondPlayer)
+                default:
+                    CreatePlayerView(newPlayer: $team1.firstPlayer)
+                }
+            }
+            .sheet(item: $selectedPlayer) { selectedPlayer in
+                switch selectedPlayer {
+                case .team1player2:
+                    PlayersSelectionView(selectedPlayer: $team1.secondPlayer, showCreateNewPlayer: $showCreateNewPlayer)
+                case .team2player1:
+                    PlayersSelectionView(selectedPlayer: $team2.firstPlayer, showCreateNewPlayer: $showCreateNewPlayer)
+                case .team2player2:
+                    PlayersSelectionView(selectedPlayer: $team2.secondPlayer, showCreateNewPlayer: $showCreateNewPlayer)
+                default:
+                    PlayersSelectionView(selectedPlayer: $team1.firstPlayer, showCreateNewPlayer: $showCreateNewPlayer)
+                }
             }
             .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { taskState in
                 if let statuses = taskState.value {
