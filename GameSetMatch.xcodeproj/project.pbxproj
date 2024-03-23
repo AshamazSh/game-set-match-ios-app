@@ -352,12 +352,12 @@
 			isa = PBXGroup;
 			children = (
 				5E48C4982B98ABF1003A44E8 /* Extensions */,
-				5E48C4372B961A18003A44E8 /* GameSetMatch.xcdatamodeld */,
 				5E48C4322B961A18003A44E8 /* Preview Content */,
 				5EA146C42BA4E924004B5BF3 /* Resources */,
 				5E48C45B2B962BFE003A44E8 /* Services */,
 				5E48C45C2B962C0C003A44E8 /* Views */,
 				5E48C42C2B961A16003A44E8 /* GameSetMatchApp.swift */,
+				5E48C4372B961A18003A44E8 /* GameSetMatch.xcdatamodeld */,
 				5E48C4352B961A18003A44E8 /* Persistence.swift */,
 			);
 			path = GameSetMatch;

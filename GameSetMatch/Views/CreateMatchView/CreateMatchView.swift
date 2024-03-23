@@ -236,6 +236,32 @@ struct CreateMatchView: View {
     private var isSingleMatch: Bool {
         customRule.matchType == .tennis || customRule.matchType == .custom && customRule.playMode == .single
     }
+
+    private func playerNameViewModel(for selectedPlayer: SelectedPlayer) -> PlayerNameViewModel {
+        switch selectedPlayer {
+        case .team1player1:
+            return PlayerNameViewModel(matchPlayer: team1.firstPlayer)
+        case .team1player2:
+            return PlayerNameViewModel(matchPlayer: team1.secondPlayer)
+        case .team2player1:
+            return PlayerNameViewModel(matchPlayer: team2.firstPlayer)
+        case .team2player2:
+            return PlayerNameViewModel(matchPlayer: team1.secondPlayer)
+        }
+    }
+    private func playerButton(for selectedPlayer: SelectedPlayer) -> some View {
+        HStack {
+            Button {
+                self.selectedPlayer = selectedPlayer
+            } label: {
+                PlayerNameView(viewModel: playerNameViewModel(for: selectedPlayer))
+            }
+            .foregroundStyle(.primary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundStyle(.secondary)
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -252,49 +278,19 @@ struct CreateMatchView: View {
                     matchTypeDescription
                     if isSingleMatch {
                         Section("Player 1") {
-                            Button {
-                                selectedPlayer = .team1player1
-                            } label: {
-                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team1.firstPlayer))
-                            }
-                            .foregroundStyle(.primary)
+                            playerButton(for: .team1player1)
                         }
                         Section("Player 2") {
-                            Button {
-                                selectedPlayer = .team2player2
-                            } label: {
-                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team2.secondPlayer))
-                            }
-                            .foregroundStyle(.primary)
+                            playerButton(for: .team2player2)
                         }
                     } else {
                         Section("Team 1") {
-                            Button {
-                                selectedPlayer = .team1player1
-                            } label: {
-                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team1.firstPlayer))
-                            }
-                            .foregroundStyle(.primary)
-                            Button {
-                                selectedPlayer = .team1player2
-                            } label: {
-                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team1.secondPlayer))
-                            }
-                            .foregroundStyle(.primary)
+                            playerButton(for: .team1player1)
+                            playerButton(for: .team1player2)
                         }
                         Section("Team 2") {
-                            Button {
-                                selectedPlayer = .team2player1
-                            } label: {
-                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team2.firstPlayer))
-                            }
-                            .foregroundStyle(.primary)
-                            Button {
-                                selectedPlayer = .team2player2
-                            } label: {
-                                PlayerNameView(viewModel: PlayerNameViewModel(matchPlayer: team2.secondPlayer))
-                            }
-                            .foregroundStyle(.primary)
+                            playerButton(for: .team2player1)
+                            playerButton(for: .team2player2)
                         }
                     }
                 }
