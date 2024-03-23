@@ -10,22 +10,24 @@ import StoreKit
 
 struct SubscriptionView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
-    
+    private let colorScheme = ColorScheme.dark
+
     var body: some View {
         SubscriptionStoreView(groupID: SubscriptionsService.passGroupId) {
             VStack {
                 Image("logo")
                     .resizable()
-                    .frame(width: 50, height: 50)
+                    .frame(width: 70, height: 70)
                     .clipShape(RoundedRectangle(cornerSize: CGSize(width: 10, height: 10)))
-                Text("Ace Access")
+                Text("Pro Features")
                     .font(.largeTitle).fontWeight(.bold)
                     .padding(.bottom)
                 Text("Unlock advanced match customization and all matches history")
                     .fontWeight(.medium)
                     .padding(.horizontal, 32)
+                    .shadow(radius: 8)
             }
+            .foregroundStyle(.white)
             .padding()
             .containerBackground(for: .subscriptionStoreFullHeight) {
                 ZStack {
@@ -46,6 +48,7 @@ struct SubscriptionView: View {
         .subscriptionStorePolicyDestination(url: URL(string: "https://sites.google.com/view/ashamazsh-gamesetmatch")!, for: .privacyPolicy)
         .subscriptionStorePolicyDestination(url: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!, for: .termsOfService)
         .subscriptionStorePickerItemBackground(.thinMaterial)
+        .productViewStyle(.compact)
         .productDescription(.hidden)
         .onInAppPurchaseCompletion { product, result in
             switch result {

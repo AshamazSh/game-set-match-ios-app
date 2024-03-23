@@ -70,7 +70,7 @@ struct MatchesHistoryView: View {
                     Button(action: {
                         showSubscriptionView.toggle()
                     }, label: {
-                        Text("Subscribe to Ace Access to see all matches history")
+                        Text("Subscribe to Pro Features to see all matches history")
                             .frame(maxWidth: .infinity, minHeight: 44)
                     })
                     .listRowInsets(EdgeInsets())
