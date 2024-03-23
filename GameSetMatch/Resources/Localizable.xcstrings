@@ -3,6 +3,12 @@
   "strings" : {
     "|" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "|"
+          }
+        },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
