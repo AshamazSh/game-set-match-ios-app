@@ -43,7 +43,7 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
             connectivityManager.sendState(matchState)
         }
     }
-    var match: Match? {
+    @Published var match: Match? {
         didSet {
             matchDidChange()
         }

@@ -48,7 +48,7 @@ struct PlayersSelectionView: View {
                 Section {
                     ForEach(filteredPlayers) { player in
                         Button {
-                            selectedPlayer = MatchPlayer(id: player.id, name: player.name, shortName: player.shortName)
+                            selectedPlayer = MatchPlayer(name: player.name, shortName: player.shortName)
                             dismiss()
                         } label: {
                             PlayerNameView(viewModel: PlayerNameViewModel(player: player))

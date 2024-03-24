@@ -16,6 +16,7 @@ struct MatchControl: View {
     @State private var layout: LayoutDirection?
     @State private var endMatchAlert = false
     @State private var isSubscribed: Bool = false
+    @State private var showMatchLog: Bool = false
     private var matchState: MatchState? {
         matchService.matchState
     }
@@ -77,6 +78,13 @@ struct MatchControl: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
+                        showMatchLog.toggle()
+                    } label: {
+                        Image(systemName: "list.bullet.clipboard")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
                         if let match = matchService.match,
                            match.isActive {
                             endMatchAlert.toggle()
@@ -111,6 +119,9 @@ struct MatchControl: View {
             }
             .onAppear {
                 updateLayoutDirection(with: UIDevice.current.orientation)
+            }
+            .sheet(isPresented: $showMatchLog) {
+                ScoreHistoryView(viewModel: ScoreHistoryViewModel(matchService: matchService))
             }
             .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { taskState in
                 if let statuses = taskState.value {

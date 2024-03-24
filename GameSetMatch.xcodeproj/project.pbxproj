@@ -59,6 +59,7 @@
 		5E5966072BAB15A100C6A30C /* PlayersSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5966062BAB15A100C6A30C /* PlayersSelectionView.swift */; };
 		5E5966092BAB18B900C6A30C /* PlayerNameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5966082BAB18B900C6A30C /* PlayerNameView.swift */; };
 		5E59660B2BAB208400C6A30C /* CreatePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E59660A2BAB208400C6A30C /* CreatePlayerView.swift */; };
+		5E5966112BB0258900C6A30C /* ScoreHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5966102BB0258900C6A30C /* ScoreHistoryView.swift */; };
 		5EA146182B9F638C004B5BF3 /* TeamScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA146172B9F638C004B5BF3 /* TeamScoreView.swift */; };
 		5EA1461A2B9F63B1004B5BF3 /* TeamSetsScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA146192B9F63B1004B5BF3 /* TeamSetsScoreView.swift */; };
 		5EA1461D2B9F7CE9004B5BF3 /* MatchesHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA1461C2B9F7CE9004B5BF3 /* MatchesHistoryView.swift */; };
@@ -209,6 +210,7 @@
 		5E5966062BAB15A100C6A30C /* PlayersSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayersSelectionView.swift; sourceTree = "<group>"; };
 		5E5966082BAB18B900C6A30C /* PlayerNameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerNameView.swift; sourceTree = "<group>"; };
 		5E59660A2BAB208400C6A30C /* CreatePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePlayerView.swift; sourceTree = "<group>"; };
+		5E5966102BB0258900C6A30C /* ScoreHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreHistoryView.swift; sourceTree = "<group>"; };
 		5EA145022B9CB883004B5BF3 /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS10.4.sdk/System/Library/Frameworks/WatchKit.framework; sourceTree = DEVELOPER_DIR; };
 		5EA146172B9F638C004B5BF3 /* TeamScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoreView.swift; sourceTree = "<group>"; };
 		5EA146192B9F63B1004B5BF3 /* TeamSetsScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamSetsScoreView.swift; sourceTree = "<group>"; };
@@ -298,6 +300,7 @@
 		5E4282792B99E41B00455090 /* MatchControl */ = {
 			isa = PBXGroup;
 			children = (
+				5E59660F2BB0257900C6A30C /* ScoreHistory */,
 				5EA146162B9F637E004B5BF3 /* TeamScoreView */,
 				5E42827A2B99E52D00455090 /* MatchControl.swift */,
 			);
@@ -533,6 +536,14 @@
 				5E56273E2B9BC1D800676D36 /* ConnectivityManager.swift */,
 			);
 			path = ConnectivityManager;
+			sourceTree = "<group>";
+		};
+		5E59660F2BB0257900C6A30C /* ScoreHistory */ = {
+			isa = PBXGroup;
+			children = (
+				5E5966102BB0258900C6A30C /* ScoreHistoryView.swift */,
+			);
+			path = ScoreHistory;
 			sourceTree = "<group>";
 		};
 		5EA146162B9F637E004B5BF3 /* TeamScoreView */ = {
@@ -928,6 +939,7 @@
 				5E48C4962B9769EE003A44E8 /* CoreDataManager.swift in Sources */,
 				5E4282782B99E0D600455090 /* CreateMatchView.swift in Sources */,
 				5E42827E2B9A2A7300455090 /* DeviceRotationViewModifier.swift in Sources */,
+				5E5966112BB0258900C6A30C /* ScoreHistoryView.swift in Sources */,
 				5E56272D2B9B415A00676D36 /* Enums.swift in Sources */,
 				5E48C48A2B9640AA003A44E8 /* Game+CoreDataClass.swift in Sources */,
 				5E48C48B2B9640AA003A44E8 /* Game+CoreDataProperties.swift in Sources */,
@@ -1178,7 +1190,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GameSetMatch/GameSetMatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"GameSetMatch/Preview Content\"";
 				DEVELOPMENT_TEAM = D9E562H7JV;
 				ENABLE_PREVIEWS = YES;
@@ -1215,7 +1227,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GameSetMatch/GameSetMatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"GameSetMatch/Preview Content\"";
 				DEVELOPMENT_TEAM = D9E562H7JV;
 				ENABLE_PREVIEWS = YES;
