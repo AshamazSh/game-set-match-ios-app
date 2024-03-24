@@ -20,7 +20,7 @@ struct MainView: View {
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
-                CreateMatchView()
+                CreateMatchView(context: context)
                     .environmentObject(CoreDataManager(context: context))
                     .tabItem {
                         Label("New match", systemImage: "figure.tennis")

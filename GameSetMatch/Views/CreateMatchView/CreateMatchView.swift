@@ -11,8 +11,41 @@ import StoreKit
 import Combine
 
 class TeamInfo: ObservableObject {
-    @Published var firstPlayer: MatchPlayer = .playerA
-    @Published var secondPlayer: MatchPlayer = .playerB
+    @Published var firstPlayer: MatchPlayer
+    @Published var secondPlayer: MatchPlayer
+    
+    init(isFirstTeam: Bool, context: NSManagedObjectContext) {
+        let request = Match.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Match.createdAt, ascending: false)]
+        request.fetchLimit = 1
+        var firstPlayer: MatchPlayer = .playerA
+        var secondPlayer: MatchPlayer = .playerB
+        if let lastMatch = try? context.fetch(request).first {
+            if isFirstTeam {
+                if let teams = lastMatch.teams.allObjectsOfType(Team.self).first {
+                    let players = teams.players.allObjectsOfType(Player.self)
+                    if players.count > 0 {
+                        firstPlayer = players[0].matchPlayer
+                    }
+                    if players.count > 1 {
+                        secondPlayer = players[1].matchPlayer
+                    }
+                }
+            } else {
+                if let teams = lastMatch.teams.allObjectsOfType(Team.self).last {
+                    let players = teams.players.allObjectsOfType(Player.self)
+                    if players.count > 0 {
+                        secondPlayer = players[0].matchPlayer
+                    }
+                    if players.count > 1 {
+                        firstPlayer = players[1].matchPlayer
+                    }
+                }
+            }
+        }
+        self.firstPlayer = firstPlayer
+        self.secondPlayer = secondPlayer
+    }
     
     func isValid(for type: MatchType, customRule: CustomRule) -> Bool {
         switch type {
@@ -157,13 +190,17 @@ struct CreateMatchView: View {
         case team2player2
     }
     
+    init(context: NSManagedObjectContext) {
+        self._team1 = ObservedObject(initialValue: TeamInfo(isFirstTeam: true, context: context))
+        self._team2 = ObservedObject(initialValue: TeamInfo(isFirstTeam: false, context: context))
+    }
+    
     @EnvironmentObject private var coreDataManager: CoreDataManager
-    @ObservedObject private var team1: TeamInfo = TeamInfo()
-    @ObservedObject private var team2: TeamInfo = TeamInfo()
+    @ObservedObject private var team1: TeamInfo
+    @ObservedObject private var team2: TeamInfo
     @ObservedObject private var customRule: CustomRule = CustomRule()
     @State private var isSubscribed: Bool = false
     @State private var showSubscriptionView = false
-    @State private var showCreateNewPlayer: Bool = false
     @State private var selectedPlayer: SelectedPlayer? = nil
     private var isValid: Bool {
         if !isSubscribed && customRule.matchType == .custom {
@@ -246,7 +283,7 @@ struct CreateMatchView: View {
         case .team2player1:
             return PlayerNameViewModel(matchPlayer: team2.firstPlayer)
         case .team2player2:
-            return PlayerNameViewModel(matchPlayer: team1.secondPlayer)
+            return PlayerNameViewModel(matchPlayer: team2.secondPlayer)
         }
     }
     private func playerButton(for selectedPlayer: SelectedPlayer) -> some View {
@@ -314,28 +351,16 @@ struct CreateMatchView: View {
             .sheet(isPresented: $showSubscriptionView) {
                 SubscriptionView()
             }
-            .sheet(isPresented: $showCreateNewPlayer) {
-                switch selectedPlayer {
-                case .team1player2:
-                    CreatePlayerView(newPlayer: $team1.secondPlayer)
-                case .team2player1:
-                    CreatePlayerView(newPlayer: $team2.firstPlayer)
-                case .team2player2:
-                    CreatePlayerView(newPlayer: $team2.secondPlayer)
-                default:
-                    CreatePlayerView(newPlayer: $team1.firstPlayer)
-                }
-            }
             .sheet(item: $selectedPlayer) { selectedPlayer in
                 switch selectedPlayer {
                 case .team1player2:
-                    PlayersSelectionView(selectedPlayer: $team1.secondPlayer, showCreateNewPlayer: $showCreateNewPlayer)
+                    PlayersSelectionView(selectedPlayer: $team1.secondPlayer)
                 case .team2player1:
-                    PlayersSelectionView(selectedPlayer: $team2.firstPlayer, showCreateNewPlayer: $showCreateNewPlayer)
+                    PlayersSelectionView(selectedPlayer: $team2.firstPlayer)
                 case .team2player2:
-                    PlayersSelectionView(selectedPlayer: $team2.secondPlayer, showCreateNewPlayer: $showCreateNewPlayer)
+                    PlayersSelectionView(selectedPlayer: $team2.secondPlayer)
                 default:
-                    PlayersSelectionView(selectedPlayer: $team1.firstPlayer, showCreateNewPlayer: $showCreateNewPlayer)
+                    PlayersSelectionView(selectedPlayer: $team1.firstPlayer)
                 }
             }
             .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { taskState in
@@ -373,8 +398,4 @@ struct CreateMatchView: View {
             return nil
         }
     }
-}
-
-#Preview {
-    CreateMatchView()
 }

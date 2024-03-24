@@ -10,9 +10,10 @@ import CoreData
 
 struct PlayersSelectionView: View {
     @Binding var selectedPlayer: MatchPlayer
-    @Binding var showCreateNewPlayer: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var context
+    @State private var showCreateNewPlayer: Bool = false
+    @State private var createdPlayer = MatchPlayer.playerA
     @FetchRequest(sortDescriptors: [SortDescriptor(\.name)])
     private var players: FetchedResults<Player>
     private var filteredPlayers: [Player] {
@@ -37,7 +38,6 @@ struct PlayersSelectionView: View {
                 if searchText.isEmpty {
                     Section {
                         Button {
-                            dismiss()
                             showCreateNewPlayer.toggle()
                         } label: {
                             Text("Add new...")
@@ -60,6 +60,9 @@ struct PlayersSelectionView: View {
             .searchable(text: $searchText)
             .navigationTitle("Select player")
             .interactiveDismissDisabled(true)
+            .navigationDestination(isPresented: $showCreateNewPlayer) {
+                CreatePlayerView(newPlayer: $createdPlayer)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -68,6 +71,10 @@ struct PlayersSelectionView: View {
                         Image(systemName: "xmark")
                     }
                 }
+            }
+            .onChange(of: createdPlayer) { oldValue, newValue in
+                selectedPlayer = newValue
+                dismiss()
             }
         }
     }

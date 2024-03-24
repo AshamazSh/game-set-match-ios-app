@@ -30,7 +30,6 @@ struct CreatePlayerView: View {
                 
                 Button {
                     newPlayer = MatchPlayer(name: name, shortName: shortName)
-                    dismiss()
                 } label: {
                     Text("Create")
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44, maxHeight: 44)
@@ -42,15 +41,6 @@ struct CreatePlayerView: View {
             .background(Color(UIColor.systemGroupedBackground))
             .navigationTitle("New player")
             .interactiveDismissDisabled(true)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                }
-            }
         }
     }
 }

@@ -22,6 +22,9 @@ extension Player {
     @NSManaged public var servedPoints: NSOrderedSet
     @NSManaged public var team: Team
 
+    var matchPlayer: MatchPlayer {
+        MatchPlayer(id: id, name: name, shortName: shortName)
+    }
 }
 
 // MARK: Generated accessors for servedPoints

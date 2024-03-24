@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct MatchPlayer: Identifiable, Codable {
+struct MatchPlayer: Identifiable, Codable, Equatable {
     let id: UUID
     let name: String
     let shortName: String
