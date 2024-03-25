@@ -18,8 +18,8 @@ class TeamInfo: ObservableObject {
         let request = Match.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Match.createdAt, ascending: false)]
         request.fetchLimit = 1
-        var firstPlayer: MatchPlayer = .playerA
-        var secondPlayer: MatchPlayer = .playerB
+        var firstPlayer: MatchPlayer = isFirstTeam ? .playerOne : .playerTwo
+        var secondPlayer: MatchPlayer = isFirstTeam ? .playerOneB : .playerTwoB
         if let lastMatch = try? context.fetch(request).first {
             if isFirstTeam {
                 if let teams = lastMatch.teams.allObjectsOfType(Team.self).first {
@@ -35,10 +35,10 @@ class TeamInfo: ObservableObject {
                 if let teams = lastMatch.teams.allObjectsOfType(Team.self).last {
                     let players = teams.players.allObjectsOfType(Player.self)
                     if players.count > 0 {
-                        secondPlayer = players[0].matchPlayer
+                        firstPlayer = players[0].matchPlayer
                     }
                     if players.count > 1 {
-                        firstPlayer = players[1].matchPlayer
+                        secondPlayer = players[1].matchPlayer
                     }
                 }
             }
@@ -88,7 +88,7 @@ class CustomRule: ObservableObject {
     @Published var tieBreak = true
     @Published var matchType: MatchType = MatchType.tennis
     private var cancellables = Set<AnyCancellable>()
-
+    
     init(duration: Int32 = 1, goldenRule: Bool = false, playMode: PlayMode = PlayMode.single, tieBreak: Bool = true, matchType: MatchType = MatchType.tennis) {
         self.duration = duration
         self.goldenRule = goldenRule
@@ -105,13 +105,13 @@ class CustomRule: ObservableObject {
             .removeDuplicates()
             .sink { [weak self] newValue in
                 guard let self,
-                self.matchType != .custom else { return }
+                      self.matchType != .custom else { return }
                 if newValue > 1 {
                     self.matchType = .custom
                 }
             }
             .store(in: &cancellables)
-
+        
         $goldenRule
             .subscribe(on: DispatchQueue.main)
             .removeDuplicates()
@@ -131,7 +131,7 @@ class CustomRule: ObservableObject {
                 }
             }
             .store(in: &cancellables)
-
+        
         $tieBreak
             .subscribe(on: DispatchQueue.main)
             .removeDuplicates()
@@ -147,7 +147,7 @@ class CustomRule: ObservableObject {
                 }
             }
             .store(in: &cancellables)
-
+        
         $matchType
             .subscribe(on: DispatchQueue.main)
             .removeDuplicates()
@@ -165,13 +165,13 @@ class CustomRule: ObservableObject {
                     self.goldenRule = false
                     self.tieBreak = true
                     self.playMode = .double
-
+                    
                 case .padel:
                     self.duration = 1
                     self.goldenRule = true
                     self.tieBreak = true
                     self.playMode = .double
-
+                    
                 case .custom:
                     break
                 }
@@ -183,7 +183,7 @@ class CustomRule: ObservableObject {
 struct CreateMatchView: View {
     private enum SelectedPlayer: Identifiable, Hashable {
         var id: Self { self }
-
+        
         case team1player1
         case team1player2
         case team2player1
@@ -196,6 +196,7 @@ struct CreateMatchView: View {
     }
     
     @EnvironmentObject private var coreDataManager: CoreDataManager
+    @EnvironmentObject private var matchService: MatchService
     @ObservedObject private var team1: TeamInfo
     @ObservedObject private var team2: TeamInfo
     @ObservedObject private var customRule: CustomRule = CustomRule()
@@ -258,7 +259,7 @@ struct CreateMatchView: View {
             }
             .disabled(customRule.matchType == .custom && !isSubscribed)
             .blur(radius: customRule.matchType == .custom && !isSubscribed ? 4 : 0)
-
+            
             if customRule.matchType == .custom && !isSubscribed {
                 Button("Subscribe to Pro Features to set your own rules") {
                     showSubscriptionView.toggle()
@@ -273,7 +274,7 @@ struct CreateMatchView: View {
     private var isSingleMatch: Bool {
         customRule.matchType == .tennis || customRule.matchType == .custom && customRule.playMode == .single
     }
-
+    
     private func playerNameViewModel(for selectedPlayer: SelectedPlayer) -> PlayerNameViewModel {
         switch selectedPlayer {
         case .team1player1:
@@ -318,7 +319,7 @@ struct CreateMatchView: View {
                             playerButton(for: .team1player1)
                         }
                         Section("Player 2") {
-                            playerButton(for: .team2player2)
+                            playerButton(for: .team2player1)
                         }
                     } else {
                         Section("Team 1") {
@@ -334,10 +335,10 @@ struct CreateMatchView: View {
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 Button {
-                    try? coreDataManager.createMatch(customRule.matchType,
-                                                     customRule: customRule.matchType == .custom ? customRule : nil,
-                                                     players1: Array(team1.players().prefix(isSingleMatch ? 1 : 2)),
-                                                     players2: Array(team2.players().suffix(isSingleMatch ? 1 : 2)))
+                    matchService.match = try? coreDataManager.createMatch(customRule.matchType,
+                                                                          customRule: customRule.matchType == .custom ? customRule : nil,
+                                                                          players1: Array(team1.players().prefix(isSingleMatch ? 1 : 2)),
+                                                                          players2: Array(team2.players().prefix(isSingleMatch ? 1 : 2)))
                 } label: {
                     Text("Create")
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44, maxHeight: 44)
@@ -371,9 +372,9 @@ struct CreateMatchView: View {
             .task {
                 for await result in Transaction.updates {
                     let transaction = checkVerified(result)
-
+                    
                     await self.updateCustomerProductStatus()
-
+                    
                     await transaction?.finish()
                 }
             }
@@ -388,7 +389,7 @@ struct CreateMatchView: View {
             }
         }
     }
-
+    
     private func checkVerified<T>(_ result: VerificationResult<T>) -> T? {
         ///Check whether the JWS passes StoreKit verification.
         switch result {

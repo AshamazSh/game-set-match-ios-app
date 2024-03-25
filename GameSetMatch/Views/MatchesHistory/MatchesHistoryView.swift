@@ -11,12 +11,10 @@ import StoreKit
 struct MatchesHistoryView: View {
     @Environment(\.managedObjectContext) private var context
     @ObservedObject var matchService: MatchService
-    @FetchRequest(
-        sortDescriptors: [
-            SortDescriptor(\.createdAt, order: .reverse)
-        ],
-        predicate: NSPredicate(format: "%K == NO", Match.kIsActive)
-    ) var matches: FetchedResults<Match>
+    @FetchRequest(sortDescriptors: [
+        SortDescriptor(\.createdAt, order: .reverse)
+    ])
+    var matches: FetchedResults<Match>
 
     private func teamName(_ team: Team) -> String {
         var name = ""

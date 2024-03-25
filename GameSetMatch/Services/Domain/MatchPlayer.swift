@@ -18,6 +18,8 @@ struct MatchPlayer: Identifiable, Codable, Equatable {
         self.shortName = shortName
     }
     
-    static let playerA = MatchPlayer(name: "Player A", shortName: "PLA")
-    static let playerB = MatchPlayer(name: "Player B", shortName: "PLB")
+    static let playerOne = MatchPlayer(name: "Player 1", shortName: "P1")
+    static let playerOneB = MatchPlayer(name: "Player 1B", shortName: "P1B")
+    static let playerTwo = MatchPlayer(name: "Player 2", shortName: "P2")
+    static let playerTwoB = MatchPlayer(name: "Player 2B", shortName: "P2B")
 }

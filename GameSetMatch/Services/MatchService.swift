@@ -34,7 +34,7 @@ extension ServingPlayer {
             return players.count > 1 ? players[1] : players[0]
         }
     }
-
+    
 }
 
 class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelegate {
@@ -74,28 +74,22 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
     }
     private let coreDataManager: CoreDataManager
     private var pointsFetchedResultsController: NSFetchedResultsController<GamePoint>?
-    private let matchesFetchedResultsController: NSFetchedResultsController<Match>
     private let connectivityManager: ConnectivityManager
     private var cancellables = Set<AnyCancellable>()
     private let context: NSManagedObjectContext
+    private let displayedMatchIdKey = "com.gamesetmatch.displayedMatchIdKey"
     
     init(context: NSManagedObjectContext, coreDataManager: CoreDataManager, connectivityManager: ConnectivityManager) {
         self.coreDataManager = coreDataManager
         self.connectivityManager = connectivityManager
         self.context = context
-        let fetchRequest = Match.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "%K == true", Match.kIsActive)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Match.createdAt, ascending: true)]
-        self.matchesFetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: context, sectionNameKeyPath: nil, cacheName: nil)
         super.init()
-        subscribeToMatchWatcher()
+        if let matchId = UserDefaults.standard.string(forKey: displayedMatchIdKey) {
+            match = coreDataManager.match(byId: matchId)
+        } else {
+            match = nil
+        }
         subscribeToConnectivityManager()
-    }
-    
-    private func subscribeToMatchWatcher() {
-        try? matchesFetchedResultsController.performFetch()
-        matchesFetchedResultsController.delegate = self
-        match = matchesFetchedResultsController.fetchedObjects?.first
     }
     
     private func subscribeToConnectivityManager() {
@@ -110,15 +104,15 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
                 switch self.connectivityManager.requestedAction {
                 case .createTennisMatch:
                     guard self.match == nil else { return }
-                    try? self.coreDataManager.createMatch(.tennis,
-                                                          players1: [.playerA],
-                                                          players2: [.playerB])
+                    self.match = try? self.coreDataManager.createMatch(.tennis,
+                                                                       players1: [.playerOne],
+                                                                       players2: [.playerTwo])
                 case .createTennis2x2Match:
                     guard self.match == nil else { return }
-                    try? self.coreDataManager.createMatch(.tennis2x2)
+                    self.match = try? self.coreDataManager.createMatch(.tennis2x2)
                 case .createPadelMatch:
                     guard self.match == nil else { return }
-                    try? self.coreDataManager.createMatch(.padel)
+                    self.match = try? self.coreDataManager.createMatch(.padel)
                 case .undo:
                     guard let matchState = self.matchState,
                           !matchState.isCompleted else { return }
@@ -133,7 +127,6 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
                     self.pointWonByTeam2()
                 case .endMatch:
                     guard self.matchState != nil else { return }
-                    self.endMatch()
                     self.matchState = nil
                 case .none, .newState, .resetMatch, .ignored, .currentStatus:
                     break
@@ -144,6 +137,10 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
     
     private func matchDidChange() {
         if let match {
+            if match.id == nil {
+                coreDataManager.migrateMatchId(match)
+            }
+            UserDefaults.standard.setValue(match.id, forKey: displayedMatchIdKey)
             let fetchRequest = GamePoint.fetchRequest()
             fetchRequest.predicate = NSPredicate(format: "%K.%K.%K == %@", GamePoint.kGame, Game.kInverseMatchSet, MatchSet.kMatch, match)
             fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \GamePoint.objectID, ascending: true)]
@@ -152,14 +149,14 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
             try? pointsFetchedResultsController?.performFetch()
             calculateCurrentSituation()
         } else {
+            UserDefaults.standard.removeObject(forKey: displayedMatchIdKey)
             pointsFetchedResultsController = nil
             matchState = nil
         }
     }
     
     func undoLastPoint() {
-        if let match,
-           match.isActive && !match.isOver {
+        if let match {
             try? coreDataManager.deleteLastPoint(in: match)
         }
     }
@@ -224,7 +221,7 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
                                    team2: MatchState.TeamInfo(name: teamNames[1], setScore: [], points: "", players: players[teams[1].id]!, isMatchWinner: match.winner == teams[1]),
                                    isTieBreak: false,
                                    isGoldenPoint: false,
-                                   isCompleted: !match.isActive || match.isOver)
+                                   isCompleted: match.winner != nil)
             for matchSet in match.sets.allObjectsOfType(MatchSet.self) {
                 let (team1CurrentSetScore, team2CurrentSetScore) = teamsSetScore(in: matchSet)
                 state.team1.setScore.append(MatchState.TeamInfo.SetScore(value: String(team1CurrentSetScore), won: matchSet.winner == teams[0]))
@@ -250,7 +247,7 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
                 }
             }
             
-            if match.isActive && !match.isOver {
+            if match.winner == nil {
                 if lastGame.isTieBreak {
                     state.team1.points = String(team1Score)
                     state.team2.points = String(team2Score)
@@ -308,15 +305,12 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
     func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
         if controller == pointsFetchedResultsController {
             calculateCurrentSituation()
-        } else if controller == matchesFetchedResultsController {
-            match = matchesFetchedResultsController.fetchedObjects?.first
         }
     }
     
     private func pointWon(byTeamIndex winnerTeamIndex: Int) {
         guard let matchState,
               let match,
-              match.isActive,
               match.winner == nil,
               let lastSet = match.sets.lastObject as? MatchSet,
               let lastGame = lastSet.games.lastObject as? Game else {
@@ -330,8 +324,8 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
         }
         wonTeamScore += 1
         let gameIsOver = matchState.isGoldenPoint ||
-            (matchState.isTieBreak && wonTeamScore - lostTeamScore > 1 && wonTeamScore > 6) ||
-            (!matchState.isTieBreak && wonTeamScore - lostTeamScore > 1 && wonTeamScore > 3)
+        (matchState.isTieBreak && wonTeamScore - lostTeamScore > 1 && wonTeamScore > 6) ||
+        (!matchState.isTieBreak && wonTeamScore - lostTeamScore > 1 && wonTeamScore > 3)
         if gameIsOver {
             var (wonTeamSetScore, lostTeamSetScore) = teamsSetScore(in: lastSet)
             if winnerTeamIndex == 1 {
@@ -346,11 +340,11 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
                     swap(&wonTeamTotalSets, &lostTeamTotalSets)
                 }
                 wonTeamTotalSets += 1
+                try? coreDataManager.setFinalScore(wonTeamTotalSets, team: teams[winnerTeamIndex])
+                try? coreDataManager.setFinalScore(lostTeamTotalSets, team: teams[winnerTeamIndex == 1 ? 0 : 1])
                 if wonTeamTotalSets > match.rule.duration - wonTeamTotalSets + lostTeamTotalSets ||
                     match.rule.duration <= wonTeamTotalSets + lostTeamTotalSets {
-                    try? coreDataManager.setFinalScore(wonTeamTotalSets, team: teams[winnerTeamIndex])
-                    try? coreDataManager.setFinalScore(lostTeamTotalSets, team: teams[winnerTeamIndex == 1 ? 0 : 1])
-                    try? coreDataManager.matchOver(match, withWinner: wonTeamTotalSets > lostTeamTotalSets ? winnerTeam : nil)
+                    try? coreDataManager.matchOver(match, withWinner: winnerTeam)
                 } else {
                     try? coreDataManager.addNewMatchSet(in: match)
                 }
@@ -362,8 +356,7 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
             }
             try? coreDataManager.gameWon(lastGame, by: winnerTeam)
         }
-
-
+        
         try? coreDataManager.addNewPoint(in: lastGame, servedBy: currentServingPlayer(in: matchState), wonBy: winnerTeam)
     }
     
@@ -385,11 +378,5 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
     
     private func player(inTeam team: Team, byId id: UUID?) -> Player {
         return team.players.allObjectsOfType(Player.self).first { $0.id == id } ?? team.players.allObjectsOfType(Player.self)[0]
-    }
-    
-    func endMatch() {
-        if let match {
-            try? coreDataManager.endMatch(match)
-        }
     }
 }

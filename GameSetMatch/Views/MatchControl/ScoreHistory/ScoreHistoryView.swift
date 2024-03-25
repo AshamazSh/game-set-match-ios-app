@@ -80,8 +80,8 @@ class ScoreHistoryViewModel: ObservableObject {
                 } else {
                     self.dismiss = true
                 }
-        })
-        .store(in: &cancellables)
+            })
+            .store(in: &cancellables)
     }
     
     private func pointsString(for points: Int) -> String {
@@ -96,7 +96,7 @@ class ScoreHistoryViewModel: ObservableObject {
             return "40"
         }
     }
-
+    
     private func calculateSections(_ match: Match) {
         let teams = match.teams.allObjectsOfType(Team.self)
         guard teams.count > 1 else { return }
@@ -116,7 +116,7 @@ class ScoreHistoryViewModel: ObservableObject {
             team2Name += player.name
         }
         self.team2Name = team2Name
-
+        
         var sections = [SetScore]()
         let sets = match.sets.allObjectsOfType(MatchSet.self)
         var team1WonSets = 0
@@ -146,7 +146,7 @@ class ScoreHistoryViewModel: ObservableObject {
                 } else {
                     scoreServingPlayer = nil
                 }
-
+                
                 var scores = [ScoreRow]()
                 var team1Points = 0
                 var team2Points = 0
@@ -235,7 +235,7 @@ class ScoreHistoryViewModel: ObservableObject {
                 }
                 let team1TeamScore = TeamScore(value: "\(team1WonSets)", hasWon: winner == teams[0])
                 let team2TeamScore = TeamScore(value: "\(team2WonSets)", hasWon: winner != teams[0])
-
+                
                 sections.append(SetScore(id: setIndex,
                                          games: gameSections,
                                          finalScore: (team1TeamScore, team2TeamScore)))
@@ -259,7 +259,7 @@ struct ScoreHistoryView: View {
     @State private var selectedTabIndex: Int = 0
     
     private func setScore(forIndex index: Int) -> (TeamScore, TeamScore)? {
-        guard index < viewModel.sections.count else { return nil }
+        guard index < viewModel.sections.count else { return (TeamScore(value: "0", hasWon: false), TeamScore(value: "0", hasWon: false)) }
         if let (left, right) = viewModel.sections[index].finalScore {
             return (left, right)
         }
@@ -271,12 +271,12 @@ struct ScoreHistoryView: View {
             currentIndex -= 1
         }
         
-        return nil
+        return (TeamScore(value: "0", hasWon: false), TeamScore(value: "0", hasWon: false))
     }
     
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
                 ZStack {
                     HStack(alignment: .center) {
                         Text(viewModel.team1Name)
@@ -306,6 +306,7 @@ struct ScoreHistoryView: View {
                 }
                 .padding(.horizontal)
                 Divider()
+                    .padding(.top)
                 TabView(selection: $selectedTabIndex) {
                     ForEach(viewModel.sections) { section in
                         List {

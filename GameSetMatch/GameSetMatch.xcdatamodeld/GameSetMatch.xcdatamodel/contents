@@ -17,8 +17,7 @@
     </entity>
     <entity name="Match" representedClassName=".Match" syncable="YES">
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="isActive" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
-        <attribute name="isOver" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
         <relationship name="rule" maxCount="1" deletionRule="Cascade" destinationEntity="Rule" inverseName="matches" inverseEntity="Rule"/>
         <relationship name="sets" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="MatchSet" inverseName="match" inverseEntity="MatchSet"/>
         <relationship name="teams" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="Team" inverseName="match" inverseEntity="Team"/>

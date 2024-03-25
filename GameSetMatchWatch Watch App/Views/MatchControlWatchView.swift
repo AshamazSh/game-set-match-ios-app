@@ -53,8 +53,6 @@ struct MatchControlWatchView: View {
                 let diff = prevCrownValue - newValue
                 prevCrownValue = newValue
                 let timeDiff = Date.now.timeIntervalSince(lastSentRequestDate)
-                print(diff)
-                print(timeDiff)
                 guard timeDiff > 3 else { return }
                 lastSentRequestDate = .now
                 if diff < 0 {
@@ -83,7 +81,7 @@ struct MatchControlWatchView: View {
                 }
                 Spacer()
             }
-            .padding()
+            .padding(.horizontal)
             .tag(1)
         }
     }

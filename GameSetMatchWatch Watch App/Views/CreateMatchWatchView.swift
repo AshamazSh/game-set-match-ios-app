@@ -27,7 +27,7 @@ struct CreateMatchWatchView: View {
             } label: {
                 Text("Create")
             }
-            .padding(.top)
+            .padding([.top, .horizontal])
         }
     }
 }

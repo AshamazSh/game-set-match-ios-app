@@ -14,7 +14,6 @@ struct MatchControl: View {
         layout ?? .vertical
     }
     @State private var layout: LayoutDirection?
-    @State private var endMatchAlert = false
     @State private var isSubscribed: Bool = false
     @State private var showMatchLog: Bool = false
     private var matchState: MatchState? {
@@ -63,15 +62,14 @@ struct MatchControl: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if let match = matchService.match {
-                    if match.isActive,
-                       !match.isOver {
-                        ToolbarItem(placement: .topBarLeading) {
-                            undoButton
-                        }
-                    } else if isSubscribed {
+                    ToolbarItem(placement: .topBarLeading) {
+                        undoButton
+                    }
+                    if match.winner != nil,
+                       isSubscribed {
                         ToolbarItem(placement: .topBarLeading) {
                             Button("Play again") {
-                                try? coreDataManager.replayMatch(match)
+                                matchService.match = try? coreDataManager.replayMatch(match)
                             }
                         }
                     }
@@ -85,37 +83,11 @@ struct MatchControl: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        if let match = matchService.match,
-                           match.isActive {
-                            endMatchAlert.toggle()
-                        } else {
-                            matchService.match = nil
-                        }
+                        matchService.match = nil
                     } label: {
-                        if let match = matchService.match,
-                           match.isActive {
-                            Image(systemName: "flag.checkered")
-                        } else {
-                            Image(systemName: "xmark")
-                        }
+                        Image(systemName: "xmark")
                     }
                 }
-            }
-            .alert(isPresented: $endMatchAlert) {
-                Alert(
-                    title: Text("End match?"),
-                    primaryButton: .destructive(Text("Yes"), action: {
-                        withAnimation {
-                            if let match = matchService.match,
-                               match.isActive {
-                                try? coreDataManager.endMatch(match)
-                            } else {
-                                matchService.match = nil
-                            }
-                        }
-                    }),
-                    secondaryButton: .cancel()
-                )
             }
             .onAppear {
                 updateLayoutDirection(with: UIDevice.current.orientation)

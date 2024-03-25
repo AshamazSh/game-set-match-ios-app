@@ -162,7 +162,7 @@ class CoreDataManager: ObservableObject {
         try createPlayers(players)
             .forEach { player in
                 team.addToPlayers(player)
-        }
+            }
         return team
     }
     
@@ -186,7 +186,7 @@ class CoreDataManager: ObservableObject {
         rule.gameTieBreak = (customRule.goldenRule
                              ? GameTieBreak.goldenRule
                              : GameTieBreak.fullTieBreak)
-                                .rawValue
+        .rawValue
         rule.tieBreak = (customRule.tieBreak
                          ? SetTieBreak.fullTieBreak
                          : SetTieBreak.firstToSix).rawValue
@@ -203,7 +203,7 @@ class CoreDataManager: ObservableObject {
         }
         return newSet
     }
-
+    
     private func createGame() throws -> Game {
         guard let newGame = NSEntityDescription.insertNewObject(forEntityName: Game.entity().name!, into: context) as? Game else {
             throw CoreDataManagerError.objectCreationFailed
@@ -211,19 +211,19 @@ class CoreDataManager: ObservableObject {
         newGame.isTieBreak = false
         return newGame
     }
-
+    
     // TODO: implement thread safety
     func createMatch(
         _ type: MatchType,
         customRule: CustomRule? = nil,
-        players1: [MatchPlayer] = [.playerA, .playerB],
-        players2: [MatchPlayer] = [.playerA, .playerB]
-    ) throws {
+        players1: [MatchPlayer] = [.playerOne, .playerOneB],
+        players2: [MatchPlayer] = [.playerTwo, .playerTwoB]
+    ) throws -> Match {
         guard let newMatch = NSEntityDescription.insertNewObject(forEntityName: Match.entity().name!, into: context) as? Match else {
             throw CoreDataManagerError.objectCreationFailed
         }
+        newMatch.id = UUID().uuidString
         newMatch.createdAt = Date()
-        newMatch.isActive = true
         newMatch.addToTeams(try createTeam(players1))
         newMatch.addToTeams(try createTeam(players2))
         newMatch.addToSets(try createMatchSet())
@@ -233,12 +233,13 @@ class CoreDataManager: ObservableObject {
             newMatch.rule = ruleObject(for: type)
         }
         try save()
+        
+        return newMatch
     }
     
-    func activeMatch() -> Match? {
+    func match(byId id: String) -> Match? {
         let request = Match.fetchRequest()
-        request.predicate = NSPredicate(format: "%K == YES", Match.kIsActive)
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Match.createdAt, ascending: true)]
+        request.predicate = NSPredicate(format: "%K == %@", Match.kId, id)
         return try? context.fetch(request).first
     }
     
@@ -272,9 +273,18 @@ class CoreDataManager: ObservableObject {
         guard let lastSet = match.sets.lastObject as? MatchSet,
               let lastGame = lastSet.games.lastObject as? Game else { return }
         
-        if lastGame.points.count == 0 {
+        if match.winner != nil {
+            match.winner?.finalScore -= 1
+            match.winner = nil
+            lastSet.winner = nil
+            lastGame.winner = nil
+            if let lastPoint = lastGame.points.lastObject as? GamePoint {
+                context.delete(lastPoint)
+            }
+        } else if lastGame.points.count == 0 {
             if lastSet.games.count == 1 {
                 guard match.sets.count > 1 else { return }
+                lastSet.previousSet?.winner?.finalScore -= 1
                 lastSet.previousSet?.winner = nil
                 (lastSet.previousSet?.games.lastObject as? Game)?.winner = nil
                 context.delete(lastSet)
@@ -293,51 +303,40 @@ class CoreDataManager: ObservableObject {
         try save()
     }
     
-    func matchOver(_ match: Match, withWinner team: Team?) throws {
+    func matchOver(_ match: Match, withWinner team: Team) throws {
         match.winner = team
-        match.isOver = true
         try save()
     }
     
-    func endMatch(_ match: Match) throws {
-        match.isActive = false
-        try save()
-    }
-
-    func replayMatch(_ match: Match) throws {
-        if match.isActive {
-            match.isActive = false
-        }
-        if let playMode = MatchType(rawValue: match.rule.playMode) {
-            var team1 = [MatchPlayer]()
-            var team2 = [MatchPlayer]()
-            for (index, team) in match.teams.allObjectsOfType(Team.self).enumerated() {
-                for player in team.players.allObjectsOfType(Player.self) {
-                    switch index {
-                    case 0:
-                        team1.append(MatchPlayer(name: player.name, shortName: player.shortName))
-                    case 1:
-                        team2.append(MatchPlayer(name: player.name, shortName: player.shortName))
-                    default:
-                        break
-                    }
+    func replayMatch(_ match: Match) throws -> Match? {
+        guard let playMode = MatchType(rawValue: match.rule.playMode) else { return nil }
+        var team1 = [MatchPlayer]()
+        var team2 = [MatchPlayer]()
+        for (index, team) in match.teams.allObjectsOfType(Team.self).enumerated() {
+            for player in team.players.allObjectsOfType(Player.self) {
+                switch index {
+                case 0:
+                    team1.append(MatchPlayer(name: player.name, shortName: player.shortName))
+                case 1:
+                    team2.append(MatchPlayer(name: player.name, shortName: player.shortName))
+                default:
+                    break
                 }
             }
-            
-            if playMode == .custom {
-                let customRule = CustomRule(duration: match.rule.duration, 
-                                            goldenRule: match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue,
-                                            playMode: CustomRule.PlayMode.double,
-                                            tieBreak: match.rule.tieBreak == SetTieBreak.fullTieBreak.rawValue, 
-                                            matchType: MatchType.custom)
-                try createMatch(.custom, customRule: customRule, players1: team1, players2: team2)
-            } else {
-                try createMatch(playMode, players1: team1, players2: team2)
-            }
         }
-        try save()
+        
+        if playMode == .custom {
+            let customRule = CustomRule(duration: match.rule.duration,
+                                        goldenRule: match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue,
+                                        playMode: CustomRule.PlayMode.double,
+                                        tieBreak: match.rule.tieBreak == SetTieBreak.fullTieBreak.rawValue,
+                                        matchType: MatchType.custom)
+            return try createMatch(.custom, customRule: customRule, players1: team1, players2: team2)
+        } else {
+            return try createMatch(playMode, players1: team1, players2: team2)
+        }
     }
-
+    
     func gameWon(_ game: Game, by team: Team) throws {
         game.winner = team
         try save()
@@ -362,5 +361,11 @@ class CoreDataManager: ObservableObject {
             }
             throw CoreDataManagerError.saveFailed
         }
+    }
+    
+    func migrateMatchId(_ match: Match) {
+        guard match.id == nil else { return }
+        match.id = UUID().uuidString
+        try? save()
     }
 }

@@ -17,14 +17,13 @@ extension Match {
     }
 
     @NSManaged public var createdAt: Date
-    @NSManaged public var isActive: Bool
-    @NSManaged public var isOver: Bool
     @NSManaged public var rule: Rule
     @NSManaged public var sets: NSOrderedSet
     @NSManaged public var teams: NSOrderedSet
     @NSManaged public var winner: Team?
-
-    static let kIsActive = "isActive"
+    @NSManaged public var id: String?
+    
+    static let kId = "id"
 }
 
 // MARK: Generated accessors for sets

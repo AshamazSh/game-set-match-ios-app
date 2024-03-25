@@ -13,7 +13,7 @@ struct PlayersSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var context
     @State private var showCreateNewPlayer: Bool = false
-    @State private var createdPlayer = MatchPlayer.playerA
+    @State private var createdPlayer = MatchPlayer.playerOne
     @FetchRequest(sortDescriptors: [SortDescriptor(\.name)])
     private var players: FetchedResults<Player>
     private var filteredPlayers: [Player] {

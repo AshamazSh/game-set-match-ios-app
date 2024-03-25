@@ -22,6 +22,7 @@ struct MainView: View {
             TabView(selection: $selectedTab) {
                 CreateMatchView(context: context)
                     .environmentObject(CoreDataManager(context: context))
+                    .environmentObject(matchService)
                     .tabItem {
                         Label("New match", systemImage: "figure.tennis")
                     }
