@@ -49,7 +49,6 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private func silentRequest(_ request: AppRequest) {
         guard isConnected,
-              !isSendingRequest,
               session.isCompanionAppInstalled,
               session.isReachable,
               session.activationState == .activated else { return }
