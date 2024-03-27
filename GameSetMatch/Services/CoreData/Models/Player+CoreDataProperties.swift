@@ -20,7 +20,7 @@ extension Player {
     @NSManaged public var shortName: String
     @NSManaged public var id: UUID
     @NSManaged public var servedPoints: NSOrderedSet
-    @NSManaged public var team: Team
+    @NSManaged public var team: Team?
 
     var matchPlayer: MatchPlayer {
         MatchPlayer(id: id, name: name, shortName: shortName)

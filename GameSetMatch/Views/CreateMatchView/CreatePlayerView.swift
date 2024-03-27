@@ -11,6 +11,8 @@ struct CreatePlayerView: View {
     @State private var name: String = ""
     @State private var shortName: String = ""
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var coreDataManager: CoreDataManager
+    
     @Binding var newPlayer: MatchPlayer
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -29,7 +31,9 @@ struct CreatePlayerView: View {
                 Spacer()
                 
                 Button {
-                    newPlayer = MatchPlayer(name: name, shortName: shortName)
+                    if let _ = try? coreDataManager.createPlayer(MatchPlayer(name: name, shortName: shortName)) {
+                        newPlayer = MatchPlayer(name: name, shortName: shortName)
+                    }
                 } label: {
                     Text("Create")
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44, maxHeight: 44)

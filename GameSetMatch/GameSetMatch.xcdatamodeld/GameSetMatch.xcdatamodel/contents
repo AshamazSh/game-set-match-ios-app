@@ -35,7 +35,7 @@
         <attribute name="name" attributeType="String" defaultValueString=""/>
         <attribute name="shortName" attributeType="String" defaultValueString=""/>
         <relationship name="servedPoints" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="GamePoint" inverseName="servedBy" inverseEntity="GamePoint"/>
-        <relationship name="team" maxCount="1" deletionRule="Nullify" destinationEntity="Team" inverseName="players" inverseEntity="Team"/>
+        <relationship name="team" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Team" inverseName="players" inverseEntity="Team"/>
     </entity>
     <entity name="Rule" representedClassName=".Rule" syncable="YES">
         <attribute name="duration" attributeType="Integer 32" defaultValueString="3" usesScalarValueType="YES"/>

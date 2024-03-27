@@ -62,6 +62,7 @@ struct PlayersSelectionView: View {
             .interactiveDismissDisabled(true)
             .navigationDestination(isPresented: $showCreateNewPlayer) {
                 CreatePlayerView(newPlayer: $createdPlayer)
+                    .environmentObject(CoreDataManager(context: context))
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

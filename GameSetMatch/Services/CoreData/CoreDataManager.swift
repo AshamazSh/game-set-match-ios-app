@@ -137,17 +137,25 @@ class CoreDataManager: ObservableObject {
         }
     }
     
+    func createPlayer(_ player: MatchPlayer, autosave: Bool = true) throws -> Player {
+        guard let playerObject = NSEntityDescription.insertNewObject(forEntityName: Player.entity().name!, into: context) as? Player else {
+            context.rollback()
+            throw CoreDataManagerError.objectCreationFailed
+        }
+        playerObject.id = player.id
+        playerObject.name = player.name
+        playerObject.shortName = player.shortName
+        if autosave {
+            try save()
+        }
+        
+        return playerObject
+    }
+    
     private func createPlayers(_ players: [MatchPlayer]) throws -> [Player] {
         var result = [Player]()
         for player in players {
-            guard let playerObject = NSEntityDescription.insertNewObject(forEntityName: Player.entity().name!, into: context) as? Player else {
-                context.rollback()
-                throw CoreDataManagerError.objectCreationFailed
-            }
-            playerObject.id = player.id
-            playerObject.name = player.name
-            playerObject.shortName = player.shortName
-            result.append(playerObject)
+            result.append(try createPlayer(player, autosave: false))
         }
         return result
     }
@@ -355,7 +363,8 @@ class CoreDataManager: ObservableObject {
     private func save(rollback: Bool = true) throws {
         do {
             try context.save()
-        } catch {
+        } catch let error {
+            print(error.localizedDescription)
             if rollback {
                 context.rollback()
             }
