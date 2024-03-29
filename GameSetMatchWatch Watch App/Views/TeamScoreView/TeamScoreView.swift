@@ -47,12 +47,14 @@ struct TeamScoreView: View {
                     if onScreen == .top {
                         Spacer()
                         Label(servingPlayer.shortName, systemImage: "tennisball.fill")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.yellow)
+                            .padding(.horizontal)
                     } else {
                         Label(servingPlayer.shortName, systemImage: "tennisball.fill")
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(.yellow)
+                            .padding(.horizontal)
                         Spacer()
                     }
                 }
@@ -63,11 +65,10 @@ struct TeamScoreView: View {
     var body: some View {
         ZStack {
             scoreButton
-            
             teamName
-
             TeamSetsScoreView(setScore: viewModel.teamInfo.setScore,
                               onScreen: onScreen)
+            .padding(.horizontal)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

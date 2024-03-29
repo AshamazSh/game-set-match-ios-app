@@ -47,20 +47,30 @@ struct MatchControlWatchView: View {
                 teamScore2
             }
             .focusable(true)
-            .digitalCrownRotation($crownValue, from: -100, through: 100, sensitivity: .low)
-            .onChange(of: crownValue, perform: { newValue in
-                guard !viewModel.connectivityManager.isSendingRequest else { return }
-                let diff = prevCrownValue - newValue
-                prevCrownValue = newValue
-                let timeDiff = Date.now.timeIntervalSince(lastSentRequestDate)
-                guard timeDiff > 3 else { return }
-                lastSentRequestDate = .now
-                if diff < 0 {
-                    viewModel.connectivityManager.sendRequest(.teamBScored)
-                } else if diff > 0 {
-                    viewModel.connectivityManager.sendRequest(.teamAScored)
-                }
-            })
+//            .digitalCrownRotation($crownValue, from: -100, through: 100, sensitivity: .low)
+//            .onChange(of: crownValue, perform: { newValue in
+//                guard !viewModel.connectivityManager.isSendingRequest else { return }
+//                let diff = prevCrownValue - newValue
+//                prevCrownValue = newValue
+//                let timeDiff = Date.now.timeIntervalSince(lastSentRequestDate)
+//                guard timeDiff > 3 else { return }
+//                lastSentRequestDate = .now
+//                if diff < 0 {
+//                    viewModel.connectivityManager.sendRequest(.teamBScored)
+//                } else if diff > 0 {
+//                    viewModel.connectivityManager.sendRequest(.teamAScored)
+//                }
+//            })
+            .gesture(DragGesture(minimumDistance: 40, coordinateSpace: .local)
+                                .onEnded({ value in
+                                    if value.translation.height < -40 {
+                                        viewModel.connectivityManager.sendRequest(.teamAScored)
+                                    }
+
+                                    if value.translation.height > 40 {
+                                        viewModel.connectivityManager.sendRequest(.teamBScored)
+                                    }
+                                }))
             .tag(0)
             
             VStack {

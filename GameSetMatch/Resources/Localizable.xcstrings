@@ -5,7 +5,14 @@
 
     },
     ":" : {
-
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ":"
+          }
+        }
+      }
     },
     "|" : {
       "localizations" : {
@@ -24,7 +31,14 @@
       }
     },
     "40" : {
-
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "40"
+          }
+        }
+      }
     },
     "Add new..." : {
       "localizations" : {
