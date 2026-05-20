@@ -189,11 +189,25 @@ class ScoreHistoryViewModel: ObservableObject {
                                                pointWonByTeam1: pointWonByTeam1,
                                                servingPlayer: scoreServingPlayer))
                     } else {
-                        let isGoldenPoint = match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue
+                        let fortyAllRule = match.scoringVersion == 2
+                        ? (FortyAllRule(rawValue: match.rule.fortyAllRule) ?? .advantages)
+                        : (match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue ? .goldenPoint : .advantages)
                         if max(team1Points, team2Points) > 3 {
                             if team1Points == team2Points {
-                                if isGoldenPoint {
+                                if fortyAllRule == .goldenPoint {
                                     scores.append(.goldenPoint)
+                                } else if fortyAllRule == .startPoint,
+                                          team1Points == 4 {
+                                    scores.append(.regular(left: "D2",
+                                                           right: "D2",
+                                                           pointWonByTeam1: pointWonByTeam1,
+                                                           servingPlayer: nil))
+                                } else if fortyAllRule == .startPoint,
+                                          team1Points >= 5 {
+                                    scores.append(.regular(left: "SP",
+                                                           right: "SP",
+                                                           pointWonByTeam1: pointWonByTeam1,
+                                                           servingPlayer: nil))
                                 } else {
                                     scores.append(.regular(left: "40",
                                                            right: "40",
@@ -276,6 +290,7 @@ struct ScoreHistoryView: View {
     @ObservedObject var viewModel: ScoreHistoryViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTabIndex: Int = 0
+    @State private var didSelectInitialTab = false
     
     private func setScore(forIndex index: Int) -> (TeamScore, TeamScore)? {
         guard index < viewModel.sections.count else { return (TeamScore(value: "0", hasWon: false), TeamScore(value: "0", hasWon: false)) }
@@ -326,6 +341,27 @@ struct ScoreHistoryView: View {
                 }
             }
         }
+    }
+    
+    private var setPicker: some View {
+        Picker("Set", selection: $selectedTabIndex) {
+            ForEach(viewModel.sections) { section in
+                Text("\(section.id + 1)")
+                    .tag(section.id)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 24)
+        .background(.bar)
+    }
+    
+    private func selectLatestSetIfNeeded(force: Bool = false) {
+        guard force || !didSelectInitialTab else { return }
+        guard let latestSet = viewModel.sections.last else { return }
+        selectedTabIndex = latestSet.id
+        didSelectInitialTab = true
     }
     
     var body: some View {
@@ -444,6 +480,10 @@ struct ScoreHistoryView: View {
                         .scrollIndicators(.hidden)
                     }
                 }
+                if viewModel.sections.count > 1 {
+                    Divider()
+                    setPicker
+                }
             }
             .ignoresSafeArea(edges: .bottom)
             .background(Color(UIColor.systemGroupedBackground))
@@ -452,6 +492,12 @@ struct ScoreHistoryView: View {
                 if newValue {
                     dismiss()
                 }
+            }
+            .onAppear {
+                selectLatestSetIfNeeded()
+            }
+            .onChange(of: viewModel.sections.count) { _, _ in
+                selectLatestSetIfNeeded(force: selectedTabIndex >= viewModel.sections.count)
             }
             .navigationTitle("Game log")
             .navigationBarTitleDisplayMode(.inline)

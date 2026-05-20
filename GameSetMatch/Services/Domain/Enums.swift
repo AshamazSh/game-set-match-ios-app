@@ -52,6 +52,41 @@ enum GameTieBreak: Int32 {
     case fullTieBreak
 }
 
+enum FortyAllRule: Int32, CaseIterable, Identifiable {
+    var id: Self { self }
+    
+    case goldenPoint = 1
+    case startPoint
+    case advantages
+    
+    var title: String {
+        switch self {
+        case .goldenPoint:
+            return "Golden point"
+        case .startPoint:
+            return "Start point"
+        case .advantages:
+            return "Advantages"
+        }
+    }
+}
+
+enum DeciderSetRule: Int32, CaseIterable, Identifiable {
+    var id: Self { self }
+    
+    case fullSet = 1
+    case superTiebreak
+    
+    var title: String {
+        switch self {
+        case .fullSet:
+            return "Full set"
+        case .superTiebreak:
+            return "Super tiebreak"
+        }
+    }
+}
+
 enum ServingPlayer: Int, CaseIterable {
     case t1p1 = 0
     case t2p1

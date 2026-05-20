@@ -18,6 +18,7 @@
     <entity name="Match" representedClassName=".Match" syncable="YES">
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="scoringVersion" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
         <relationship name="rule" maxCount="1" deletionRule="Nullify" destinationEntity="Rule" inverseName="matches" inverseEntity="Rule"/>
         <relationship name="sets" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="MatchSet" inverseName="match" inverseEntity="MatchSet"/>
         <relationship name="teams" toMany="YES" deletionRule="Cascade" ordered="YES" destinationEntity="Team" inverseName="match" inverseEntity="Team"/>
@@ -38,7 +39,9 @@
         <relationship name="team" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Team" inverseName="players" inverseEntity="Team"/>
     </entity>
     <entity name="Rule" representedClassName=".Rule" syncable="YES">
+        <attribute name="deciderSetRule" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
         <attribute name="duration" attributeType="Integer 32" defaultValueString="3" usesScalarValueType="YES"/>
+        <attribute name="fortyAllRule" attributeType="Integer 32" defaultValueString="1" usesScalarValueType="YES"/>
         <attribute name="gameTieBreak" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="name" attributeType="String" defaultValueString=""/>
         <attribute name="playMode" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>

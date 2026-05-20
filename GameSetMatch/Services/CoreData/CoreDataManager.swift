@@ -55,9 +55,11 @@ class CoreDataManager: ObservableObject {
             fatalError("Can't create default rule")
         }
         let matchType = MatchType.tennis
-        rule.duration = 1
+        rule.duration = 3
         rule.playMode = matchType.rawValue
         rule.gameTieBreak = GameTieBreak.fullTieBreak.rawValue
+        rule.fortyAllRule = FortyAllRule.startPoint.rawValue
+        rule.deciderSetRule = DeciderSetRule.fullSet.rawValue
         rule.tieBreak = SetTieBreak.fullTieBreak.rawValue
         rule.name = matchType.name
         do {
@@ -73,9 +75,11 @@ class CoreDataManager: ObservableObject {
             fatalError("Can't create default rule")
         }
         let matchType = MatchType.tennis2x2
-        rule.duration = 1
+        rule.duration = 3
         rule.playMode = matchType.rawValue
         rule.gameTieBreak = GameTieBreak.fullTieBreak.rawValue
+        rule.fortyAllRule = FortyAllRule.startPoint.rawValue
+        rule.deciderSetRule = DeciderSetRule.fullSet.rawValue
         rule.tieBreak = SetTieBreak.fullTieBreak.rawValue
         rule.name = matchType.name
         do {
@@ -91,9 +95,11 @@ class CoreDataManager: ObservableObject {
             fatalError("Can't create default rule")
         }
         let matchType = MatchType.padel
-        rule.duration = 1
+        rule.duration = 3
         rule.playMode = matchType.rawValue
         rule.gameTieBreak = GameTieBreak.goldenRule.rawValue
+        rule.fortyAllRule = FortyAllRule.startPoint.rawValue
+        rule.deciderSetRule = DeciderSetRule.fullSet.rawValue
         rule.tieBreak = SetTieBreak.fullTieBreak.rawValue
         rule.name = matchType.name
         do {
@@ -199,13 +205,10 @@ class CoreDataManager: ObservableObject {
         }
         rule.duration = customRule.duration
         rule.playMode = MatchType.custom.rawValue
-        rule.gameTieBreak = (customRule.goldenRule
-                             ? GameTieBreak.goldenRule
-                             : GameTieBreak.fullTieBreak)
-        .rawValue
-        rule.tieBreak = (customRule.tieBreak
-                         ? SetTieBreak.fullTieBreak
-                         : SetTieBreak.firstToSix).rawValue
+        rule.fortyAllRule = customRule.fortyAllRule.rawValue
+        rule.deciderSetRule = customRule.deciderSetRule.rawValue
+        rule.gameTieBreak = customRule.fortyAllRule == .goldenPoint ? GameTieBreak.goldenRule.rawValue : GameTieBreak.fullTieBreak.rawValue
+        rule.tieBreak = SetTieBreak.fullTieBreak.rawValue
         rule.name = "Custom"
         return rule
     }
@@ -220,11 +223,11 @@ class CoreDataManager: ObservableObject {
         return newSet
     }
     
-    private func createGame() throws -> Game {
+    private func createGame(isTieBreak: Bool = false) throws -> Game {
         guard let newGame = NSEntityDescription.insertNewObject(forEntityName: EntityName.game, into: context) as? Game else {
             throw CoreDataManagerError.objectCreationFailed
         }
-        newGame.isTieBreak = false
+        newGame.isTieBreak = isTieBreak
         return newGame
     }
     
@@ -233,12 +236,14 @@ class CoreDataManager: ObservableObject {
         _ type: MatchType,
         customRule: CustomRule? = nil,
         players1: [MatchPlayer] = [.playerOne, .playerOneB],
-        players2: [MatchPlayer] = [.playerTwo, .playerTwoB]
+        players2: [MatchPlayer] = [.playerTwo, .playerTwoB],
+        scoringVersion: Int32 = 2
     ) throws -> Match {
         guard let newMatch = NSEntityDescription.insertNewObject(forEntityName: EntityName.match, into: context) as? Match else {
             throw CoreDataManagerError.objectCreationFailed
         }
         newMatch.id = UUID().uuidString
+        newMatch.scoringVersion = scoringVersion
         newMatch.createdAt = Date()
         newMatch.addToTeams(try createTeam(players1))
         newMatch.addToTeams(try createTeam(players2))
@@ -259,18 +264,20 @@ class CoreDataManager: ObservableObject {
         return try? context.fetch(request).first
     }
     
-    func addNewMatchSet(in match: Match) throws {
-        let newSet = try createMatchSet()
+    func addNewMatchSet(in match: Match, startsWithTieBreak: Bool = false) throws {
+        let newSet = try createMatchSet(createFirstGame: !startsWithTieBreak)
+        if startsWithTieBreak {
+            newSet.addToGames(try createGame(isTieBreak: true))
+        }
         newSet.previousSet = match.sets.lastObject as? MatchSet
         newSet.match = match
         try save()
     }
     
     func addNewGame(in matchSet: MatchSet, isTieBreak: Bool = false) throws {
-        let newGame = try createGame()
+        let newGame = try createGame(isTieBreak: isTieBreak)
         newGame.previousGame = matchSet.games.lastObject as? Game
         newGame.inverseMatchSet = matchSet
-        newGame.isTieBreak = isTieBreak
         try save()
     }
     
@@ -343,9 +350,9 @@ class CoreDataManager: ObservableObject {
         
         if playMode == .custom {
             let customRule = CustomRule(duration: match.rule.duration,
-                                        goldenRule: match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue,
                                         playMode: CustomRule.PlayMode.double,
-                                        tieBreak: match.rule.tieBreak == SetTieBreak.fullTieBreak.rawValue,
+                                        fortyAllRule: FortyAllRule(rawValue: match.rule.fortyAllRule) ?? .advantages,
+                                        deciderSetRule: DeciderSetRule(rawValue: match.rule.deciderSetRule) ?? .fullSet,
                                         matchType: MatchType.custom)
             return try createMatch(.custom, customRule: customRule, players1: team1, players2: team2)
         } else {

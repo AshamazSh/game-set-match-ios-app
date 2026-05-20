@@ -127,7 +127,7 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
                     self.pointWonByTeam2()
                 case .endMatch:
                     guard self.matchState != nil else { return }
-                    self.matchState = nil
+                    self.match = nil
                 case .none, .newState, .resetMatch, .ignored, .currentStatus:
                     break
                 }
@@ -241,9 +241,17 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
     }
     
     private func calculateCurrentSituation() {
+        if match?.scoringVersion == 2 {
+            calculateCurrentSituationV2()
+            return
+        }
         if let match {
-            var state = MatchState(team1: MatchState.TeamInfo(name: teamNames[0], setScore: [], points: "", players: players[teams[0].id]!, isMatchWinner: match.winner == teams[0]),
-                                   team2: MatchState.TeamInfo(name: teamNames[1], setScore: [], points: "", players: players[teams[1].id]!, isMatchWinner: match.winner == teams[1]),
+            guard teams.count > 1,
+                  teamNames.count > 1,
+                  let team1Players = players[teams[0].id],
+                  let team2Players = players[teams[1].id] else { return }
+            var state = MatchState(team1: MatchState.TeamInfo(name: teamNames[0], setScore: [], points: "", players: team1Players, isMatchWinner: match.winner == teams[0]),
+                                   team2: MatchState.TeamInfo(name: teamNames[1], setScore: [], points: "", players: team2Players, isMatchWinner: match.winner == teams[1]),
                                    isTieBreak: false,
                                    isGoldenPoint: false,
                                    isCompleted: match.winner != nil)
@@ -334,6 +342,10 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
     }
     
     private func pointWon(byTeamIndex winnerTeamIndex: Int) {
+        if match?.scoringVersion == 2 {
+            pointWonV2(byTeamIndex: winnerTeamIndex)
+            return
+        }
         guard let matchState,
               let match,
               match.winner == nil,
@@ -403,6 +415,230 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
             try coreDataManager.addNewPoint(in: lastGame, servedBy: servingPlayer, wonBy: winnerTeam)
         } catch {
             coreDataManager.rollback()
+        }
+    }
+    
+    private var servingSequence: [ServingPlayer] {
+        guard teams.count > 1 else { return [.t1p1, .t2p1] }
+        let isDoubles = teams[0].players.count > 1 || teams[1].players.count > 1
+        return isDoubles ? ServingPlayer.allCases : [.t1p1, .t2p1]
+    }
+    
+    private func servingPlayer(at index: Int) -> ServingPlayer {
+        let sequence = servingSequence
+        guard !sequence.isEmpty else { return .t1p1 }
+        return sequence[index % sequence.count]
+    }
+    
+    private func servingIndexForCurrentGame(in match: Match, lastSet: MatchSet, lastGame: Game) -> Int {
+        var serverIndex = 0
+        for matchSet in match.sets.allObjectsOfType(MatchSet.self) {
+            for game in matchSet.games.allObjectsOfType(Game.self) {
+                if game == lastGame {
+                    if game.isTieBreak {
+                        let pointsCount = game.points.count
+                        serverIndex += pointsCount == 0 ? 0 : (pointsCount + 1) / 2
+                    }
+                    return serverIndex
+                }
+                if game.winner != nil,
+                   !game.isTieBreak {
+                    serverIndex += 1
+                }
+            }
+            if matchSet == lastSet {
+                break
+            }
+        }
+        return serverIndex
+    }
+    
+    private func currentServingPlayerV2(match: Match, lastSet: MatchSet, lastGame: Game) -> Player? {
+        let servingPlayer = servingPlayer(at: servingIndexForCurrentGame(in: match, lastSet: lastSet, lastGame: lastGame))
+        switch servingPlayer {
+        case .t1p1, .t1p2:
+            return servingPlayer.team1ServingPlayer(players: teams[0].players.allObjectsOfType(Player.self))
+        case .t2p1, .t2p2:
+            return servingPlayer.team2ServingPlayer(players: teams[1].players.allObjectsOfType(Player.self))
+        }
+    }
+    
+    private func isSuperTiebreak(_ game: Game, in match: Match) -> Bool {
+        game.isTieBreak &&
+        match.rule.deciderSetRule == DeciderSetRule.superTiebreak.rawValue &&
+        match.rule.duration > 1 &&
+        Int32(match.sets.count) == match.rule.duration
+    }
+    
+    private func shouldStartSuperTiebreakAfterCurrentSet(in match: Match, wonTeamTotalSets: Int32, lostTeamTotalSets: Int32) -> Bool {
+        match.rule.duration > 1 &&
+        match.rule.deciderSetRule == DeciderSetRule.superTiebreak.rawValue &&
+        Int32(match.sets.count + 1) == match.rule.duration &&
+        wonTeamTotalSets == lostTeamTotalSets
+    }
+    
+    private func gameScoreStringsV2(team1Score: Int32, team2Score: Int32, fortyAllRule: FortyAllRule) -> (String, String, Bool) {
+        switch fortyAllRule {
+        case .goldenPoint:
+            let isGoldenPoint = team1Score == 3 && team2Score == 3
+            return (pointsString(for: team1Score), pointsString(for: team2Score), isGoldenPoint)
+        case .advantages:
+            if max(team1Score, team2Score) > 3 {
+                if team1Score == team2Score {
+                    return ("40", "40", false)
+                } else if team1Score > team2Score {
+                    return ("AD", "-", false)
+                } else {
+                    return ("-", "AD", false)
+                }
+            }
+            return (pointsString(for: team1Score), pointsString(for: team2Score), false)
+        case .startPoint:
+            if max(team1Score, team2Score) > 3 {
+                if team1Score == team2Score {
+                    if team1Score == 4 {
+                        return ("D2", "D2", false)
+                    } else if team1Score >= 5 {
+                        return ("SP", "SP", false)
+                    }
+                    return ("40", "40", false)
+                } else if team1Score > team2Score {
+                    return ("AD", "-", false)
+                } else {
+                    return ("-", "AD", false)
+                }
+            }
+            return (pointsString(for: team1Score), pointsString(for: team2Score), false)
+        }
+    }
+    
+    private func gameIsOverV2(isTieBreak: Bool, isSuperTiebreak: Bool, fortyAllRule: FortyAllRule, wonTeamScore: Int32, lostTeamScore: Int32) -> Bool {
+        if isTieBreak {
+            let minimumPoints: Int32 = isSuperTiebreak ? 10 : 7
+            return wonTeamScore >= minimumPoints && wonTeamScore - lostTeamScore > 1
+        }
+        switch fortyAllRule {
+        case .goldenPoint:
+            return wonTeamScore >= 4 && (wonTeamScore - lostTeamScore > 1 || lostTeamScore == 3)
+        case .advantages:
+            return wonTeamScore >= 4 && wonTeamScore - lostTeamScore > 1
+        case .startPoint:
+            return (wonTeamScore >= 4 && wonTeamScore - lostTeamScore > 1) ||
+            (wonTeamScore >= 6 && wonTeamScore - lostTeamScore > 0)
+        }
+    }
+    
+    private func calculateCurrentSituationV2() {
+        guard let match,
+              teams.count > 1,
+              teamNames.count > 1,
+              let team1Players = players[teams[0].id],
+              let team2Players = players[teams[1].id] else { return }
+        var state = MatchState(team1: MatchState.TeamInfo(name: teamNames[0], setScore: [], points: "", players: team1Players, isMatchWinner: match.winner == teams[0]),
+                               team2: MatchState.TeamInfo(name: teamNames[1], setScore: [], points: "", players: team2Players, isMatchWinner: match.winner == teams[1]),
+                               isTieBreak: false,
+                               isGoldenPoint: false,
+                               isCompleted: match.winner != nil)
+        for matchSet in match.sets.allObjectsOfType(MatchSet.self) {
+            let (team1CurrentSetScore, team2CurrentSetScore) = teamsSetScore(in: matchSet)
+            state.team1.setScore.append(MatchState.TeamInfo.SetScore(value: String(team1CurrentSetScore), won: matchSet.winner == teams[0]))
+            state.team2.setScore.append(MatchState.TeamInfo.SetScore(value: String(team2CurrentSetScore), won: matchSet.winner == teams[1]))
+        }
+        guard let lastSet = match.sets.lastObject as? MatchSet,
+              let lastGame = lastSet.games.lastObject as? Game else {
+            matchState = state
+            return
+        }
+        
+        let (team1Score, team2Score) = teamsGameScore(in: lastGame)
+        if match.winner == nil {
+            if lastGame.isTieBreak {
+                state.team1.points = String(team1Score)
+                state.team2.points = String(team2Score)
+                state.isTieBreak = true
+            } else {
+                let fortyAllRule = FortyAllRule(rawValue: match.rule.fortyAllRule) ?? .advantages
+                let scoreStrings = gameScoreStringsV2(team1Score: team1Score, team2Score: team2Score, fortyAllRule: fortyAllRule)
+                state.team1.points = scoreStrings.0
+                state.team2.points = scoreStrings.1
+                state.isGoldenPoint = scoreStrings.2
+            }
+            if let player = currentServingPlayerV2(match: match, lastSet: lastSet, lastGame: lastGame) {
+                let matchPlayer = MatchPlayer(id: player.id, name: player.name, shortName: player.shortName.uppercased())
+                if player.team == teams[0] {
+                    state.team1.servingPlayer = matchPlayer
+                } else {
+                    state.team2.servingPlayer = matchPlayer
+                }
+            }
+        } else {
+            state.team1.points = match.winner == teams[0] ? "🏆" : "-"
+            state.team2.points = match.winner == teams[1] ? "🏆" : "-"
+        }
+        matchState = state
+    }
+    
+    private func pointWonV2(byTeamIndex winnerTeamIndex: Int) {
+        guard let match,
+              match.winner == nil,
+              teams.indices.contains(winnerTeamIndex),
+              let lastSet = match.sets.lastObject as? MatchSet,
+              let lastGame = lastSet.games.lastObject as? Game,
+              let servingPlayer = currentServingPlayerV2(match: match, lastSet: lastSet, lastGame: lastGame) else { return }
+        let winnerTeam = teams[winnerTeamIndex]
+        var (wonTeamScore, lostTeamScore) = teamsGameScore(in: lastGame)
+        if winnerTeamIndex == 1 {
+            swap(&wonTeamScore, &lostTeamScore)
+        }
+        wonTeamScore += 1
+        
+        let isSuperTiebreak = isSuperTiebreak(lastGame, in: match)
+        let fortyAllRule = FortyAllRule(rawValue: match.rule.fortyAllRule) ?? .advantages
+        let gameIsOver = gameIsOverV2(isTieBreak: lastGame.isTieBreak,
+                                      isSuperTiebreak: isSuperTiebreak,
+                                      fortyAllRule: fortyAllRule,
+                                      wonTeamScore: wonTeamScore,
+                                      lostTeamScore: lostTeamScore)
+        if gameIsOver {
+            var (wonTeamSetScore, lostTeamSetScore) = teamsSetScore(in: lastSet)
+            if winnerTeamIndex == 1 {
+                swap(&wonTeamSetScore, &lostTeamSetScore)
+            }
+            wonTeamSetScore += 1
+            let setIsOver = lastGame.isTieBreak || (wonTeamSetScore >= 6 && wonTeamSetScore - lostTeamSetScore > 1)
+            do {
+                if setIsOver {
+                    var (wonTeamTotalSets, lostTeamTotalSets) = matchCurrentScore(in: match)
+                    if winnerTeamIndex == 1 {
+                        swap(&wonTeamTotalSets, &lostTeamTotalSets)
+                    }
+                    wonTeamTotalSets += 1
+                    try coreDataManager.setFinalScore(wonTeamTotalSets, team: teams[winnerTeamIndex])
+                    try coreDataManager.setFinalScore(lostTeamTotalSets, team: teams[winnerTeamIndex == 1 ? 0 : 1])
+                    if wonTeamTotalSets > match.rule.duration / 2 {
+                        try coreDataManager.matchOver(match, withWinner: winnerTeam)
+                    } else {
+                        let startsWithTieBreak = shouldStartSuperTiebreakAfterCurrentSet(in: match,
+                                                                                         wonTeamTotalSets: wonTeamTotalSets,
+                                                                                         lostTeamTotalSets: lostTeamTotalSets)
+                        try coreDataManager.addNewMatchSet(in: match, startsWithTieBreak: startsWithTieBreak)
+                    }
+                    try coreDataManager.setWon(lastSet, by: winnerTeam)
+                } else {
+                    let nextGameIsTieBreak = wonTeamSetScore == 6 && lostTeamSetScore == 6
+                    try coreDataManager.addNewGame(in: lastSet, isTieBreak: nextGameIsTieBreak)
+                }
+                try coreDataManager.gameWon(lastGame, by: winnerTeam)
+                try coreDataManager.addNewPoint(in: lastGame, servedBy: servingPlayer, wonBy: winnerTeam)
+            } catch {
+                coreDataManager.rollback()
+            }
+        } else {
+            do {
+                try coreDataManager.addNewPoint(in: lastGame, servedBy: servingPlayer, wonBy: winnerTeam)
+            } catch {
+                coreDataManager.rollback()
+            }
         }
     }
     

@@ -18,6 +18,14 @@ struct MatchControl: View {
     private var matchState: MatchState? {
         matchService.matchState
     }
+    private var isSuperTiebreak: Bool {
+        guard let match = matchService.match,
+              match.scoringVersion == 2,
+              match.rule.deciderSetRule == DeciderSetRule.superTiebreak.rawValue,
+              let lastSet = match.sets.lastObject as? MatchSet,
+              let lastGame = lastSet.games.lastObject as? Game else { return false }
+        return lastGame.isTieBreak && Int32(match.sets.count) == match.rule.duration
+    }
     
     var undoButton: some View {
         Button {
@@ -58,6 +66,7 @@ struct MatchControl: View {
                     }
                 }
             }
+            .navigationTitle(isSuperTiebreak ? "Super tiebreak" : "")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if let match = matchService.match {

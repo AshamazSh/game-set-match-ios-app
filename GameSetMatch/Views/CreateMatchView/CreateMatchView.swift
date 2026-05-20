@@ -7,7 +7,6 @@
 
 import SwiftUI
 import CoreData
-import StoreKit
 import Combine
 
 class TeamInfo: ObservableObject {
@@ -82,18 +81,22 @@ class CustomRule: ObservableObject {
             }
         }
     }
-    @Published var duration: Int32 = 1
-    @Published var goldenRule = false
-    @Published var playMode = PlayMode.single
-    @Published var tieBreak = true
+    @Published var duration: Int32 = 3
+    @Published var playMode = PlayMode.double
+    @Published var fortyAllRule = FortyAllRule.startPoint
+    @Published var deciderSetRule = DeciderSetRule.fullSet
     @Published var matchType: MatchType = MatchType.tennis
     private var cancellables = Set<AnyCancellable>()
     
-    init(duration: Int32 = 1, goldenRule: Bool = false, playMode: PlayMode = PlayMode.single, tieBreak: Bool = true, matchType: MatchType = MatchType.tennis) {
+    init(duration: Int32 = 3,
+         playMode: PlayMode = PlayMode.double,
+         fortyAllRule: FortyAllRule = .startPoint,
+         deciderSetRule: DeciderSetRule = .fullSet,
+         matchType: MatchType = MatchType.tennis) {
         self.duration = duration
-        self.goldenRule = goldenRule
         self.playMode = playMode
-        self.tieBreak = tieBreak
+        self.fortyAllRule = fortyAllRule
+        self.deciderSetRule = deciderSetRule
         self.matchType = matchType
         
         subscribeToChanges()
@@ -104,76 +107,9 @@ class CustomRule: ObservableObject {
             .subscribe(on: DispatchQueue.main)
             .removeDuplicates()
             .sink { [weak self] newValue in
-                guard let self,
-                      self.matchType != .custom else { return }
-                if newValue > 1 {
-                    self.matchType = .custom
-                }
-            }
-            .store(in: &cancellables)
-        
-        $goldenRule
-            .subscribe(on: DispatchQueue.main)
-            .removeDuplicates()
-            .sink { [weak self] newValue in
                 guard let self else { return }
-                switch self.matchType {
-                case .tennis, .tennis2x2:
-                    if newValue == true {
-                        self.matchType = .custom
-                    }
-                case .padel:
-                    if newValue == false {
-                        self.matchType = .custom
-                    }
-                case .custom:
-                    break
-                }
-            }
-            .store(in: &cancellables)
-        
-        $tieBreak
-            .subscribe(on: DispatchQueue.main)
-            .removeDuplicates()
-            .sink { [weak self] newValue in
-                guard let self else { return }
-                switch self.matchType {
-                case .tennis, .tennis2x2, .padel:
-                    if newValue == false {
-                        self.matchType = .custom
-                    }
-                case .custom:
-                    break
-                }
-            }
-            .store(in: &cancellables)
-        
-        $matchType
-            .subscribe(on: DispatchQueue.main)
-            .removeDuplicates()
-            .sink { [weak self] newValue in
-                guard let self else { return }
-                switch newValue {
-                case .tennis:
-                    self.duration = 1
-                    self.goldenRule = false
-                    self.tieBreak = true
-                    self.playMode = .single
-                    
-                case .tennis2x2:
-                    self.duration = 1
-                    self.goldenRule = false
-                    self.tieBreak = true
-                    self.playMode = .double
-                    
-                case .padel:
-                    self.duration = 1
-                    self.goldenRule = true
-                    self.tieBreak = true
-                    self.playMode = .double
-                    
-                case .custom:
-                    break
+                if newValue == 1 {
+                    self.deciderSetRule = .fullSet
                 }
             }
             .store(in: &cancellables)
@@ -200,13 +136,8 @@ struct CreateMatchView: View {
     @ObservedObject private var team1: TeamInfo
     @ObservedObject private var team2: TeamInfo
     @ObservedObject private var customRule: CustomRule = CustomRule()
-    @State private var isSubscribed: Bool = false
-    @State private var showSubscriptionView = false
     @State private var selectedPlayer: SelectedPlayer? = nil
     private var isValid: Bool {
-        if !isSubscribed && customRule.matchType == .custom {
-            return false
-        }
         return team1.isValid(for: customRule.matchType, customRule: customRule) && team2.isValid(for: customRule.matchType, customRule: customRule)
     }
     
@@ -216,63 +147,44 @@ struct CreateMatchView: View {
                 LabeledContent("Sets:") {
                     Stepper(String(customRule.duration)) {
                         guard customRule.duration < 9 else { return }
-                        customRule.duration += 1
+                        customRule.duration += 2
                     } onDecrement: {
                         guard customRule.duration > 1 else { return }
-                        customRule.duration -= 1
+                        customRule.duration -= 2
                     }
                 }
-                LabeledContent {
-                    Toggle(isOn: $customRule.tieBreak) {
-                        EmptyView()
+                LabeledContent("40:40 decider") {
+                    Picker(selection: $customRule.fortyAllRule, label: EmptyView()) {
+                        ForEach(FortyAllRule.allCases) { rule in
+                            Text(rule.title)
+                        }
                     }
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text("Tiebreak")
-                        Text("Played on 6:6")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+                    .pickerStyle(.menu)
                 }
-                LabeledContent {
-                    Toggle(isOn: $customRule.goldenRule) {
-                        EmptyView()
-                    }
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text("Golden point")
-                        Text("Played on 40:40")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                if customRule.matchType == .custom {
-                    LabeledContent("Mode") {
-                        Picker(selection: $customRule.playMode, label: EmptyView()) {
-                            ForEach(CustomRule.PlayMode.allCases) { type in
-                                Text(type.title)
+                if customRule.duration > 1 {
+                    LabeledContent("Decider set") {
+                        Picker(selection: $customRule.deciderSetRule, label: EmptyView()) {
+                            ForEach(DeciderSetRule.allCases) { rule in
+                                Text(rule.title)
                             }
                         }
                         .pickerStyle(.menu)
                     }
                 }
-            }
-            .disabled(customRule.matchType == .custom && !isSubscribed)
-            .blur(radius: customRule.matchType == .custom && !isSubscribed ? 4 : 0)
-            
-            if customRule.matchType == .custom && !isSubscribed {
-                Button("Subscribe to Pro Features to set your own rules") {
-                    showSubscriptionView.toggle()
+                LabeledContent("Mode") {
+                    Picker(selection: $customRule.playMode, label: EmptyView()) {
+                        ForEach(CustomRule.PlayMode.allCases) { type in
+                            Text(type.title)
+                        }
+                    }
+                    .pickerStyle(.menu)
                 }
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity)
-                .padding(.bottom)
             }
         }
     }
     
     private var isSingleMatch: Bool {
-        customRule.matchType == .tennis || customRule.matchType == .custom && customRule.playMode == .single
+        customRule.playMode == .single
     }
     
     private func playerNameViewModel(for selectedPlayer: SelectedPlayer) -> PlayerNameViewModel {
@@ -305,14 +217,6 @@ struct CreateMatchView: View {
         NavigationStack {
             VStack {
                 Form {
-                    LabeledContent("Rules") {
-                        Picker(selection: $customRule.matchType, label: EmptyView()) {
-                            ForEach(MatchType.allCases) { type in
-                                Text(type.name)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
                     matchTypeDescription
                     if isSingleMatch {
                         Section("Player 1") {
@@ -335,8 +239,8 @@ struct CreateMatchView: View {
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 Button {
-                    matchService.createMatch(customRule.matchType,
-                                             customRule: customRule.matchType == .custom ? customRule : nil,
+                    matchService.createMatch(.custom,
+                                             customRule: customRule,
                                              players1: Array(team1.players().prefix(isSingleMatch ? 1 : 2)),
                                              players2: Array(team2.players().prefix(isSingleMatch ? 1 : 2)))
                 } label: {
@@ -349,9 +253,6 @@ struct CreateMatchView: View {
             }
             .background(Color(UIColor.systemGroupedBackground))
             .navigationTitle("Create new match")
-            .sheet(isPresented: $showSubscriptionView) {
-                SubscriptionView()
-            }
             .sheet(item: $selectedPlayer) { selectedPlayer in
                 switch selectedPlayer {
                 case .team1player2:
@@ -364,40 +265,6 @@ struct CreateMatchView: View {
                     PlayersSelectionView(selectedPlayer: $team1.firstPlayer)
                 }
             }
-            .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { taskState in
-                if let statuses = taskState.value {
-                    isSubscribed = SubscriptionsService.hasSubscription(in: statuses)
-                    isSubscribed = true
-                }
-            }
-            .task {
-                for await result in Transaction.updates {
-                    let transaction = checkVerified(result)
-                    
-                    await self.updateCustomerProductStatus()
-                    
-                    await transaction?.finish()
-                }
-            }
-        }
-    }
-    
-    @MainActor
-    func updateCustomerProductStatus() async {
-        for await result in Transaction.currentEntitlements {
-            if let transaction = checkVerified(result) {
-                await transaction.finish()
-            }
-        }
-    }
-    
-    private func checkVerified<T>(_ result: VerificationResult<T>) -> T? {
-        ///Check whether the JWS passes StoreKit verification.
-        switch result {
-        case .verified(let safe):
-            return safe
-        default:
-            return nil
         }
     }
 }

@@ -18,6 +18,8 @@ extension Rule {
 
     @NSManaged public var duration: Int32
     @NSManaged public var gameTieBreak: Int32
+    @NSManaged public var fortyAllRule: Int32
+    @NSManaged public var deciderSetRule: Int32
     @NSManaged public var name: String
     @NSManaged public var playMode: Int32
     @NSManaged public var tieBreak: Int32
