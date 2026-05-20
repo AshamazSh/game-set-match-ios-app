@@ -9,28 +9,78 @@ import XCTest
 @testable import GameSetMatch
 
 final class GameSetMatchTests: XCTestCase {
+    private var persistenceController: PersistenceController!
+    private var coreDataManager: CoreDataManager!
+    private var matchService: MatchService!
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+        persistenceController = PersistenceController(inMemory: true)
+        let context = persistenceController.container.viewContext
+        coreDataManager = CoreDataManager(context: context)
+        matchService = MatchService(context: context,
+                                    coreDataManager: coreDataManager,
+                                    connectivityManager: ConnectivityManager())
     }
 
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        matchService = nil
+        coreDataManager = nil
+        persistenceController = nil
     }
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    func testTennisGameAdvancesSetScoreAfterFourStraightPoints() throws {
+        matchService.createMatch(.tennis,
+                                 players1: [.playerOne],
+                                 players2: [.playerTwo])
+
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam1()
+
+        let state = try XCTUnwrap(matchService.matchState)
+        XCTAssertEqual(state.team1.setScore.first?.value, "1")
+        XCTAssertEqual(state.team2.setScore.first?.value, "0")
+        XCTAssertEqual(state.team1.points, "0")
+        XCTAssertEqual(state.team2.points, "0")
     }
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
-        }
+    func testPadelGoldenPointEndsGameAtFortyForty() throws {
+        matchService.createMatch(.padel)
+
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam2()
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam2()
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam2()
+
+        XCTAssertEqual(matchService.matchState?.team1.points, "40")
+        XCTAssertEqual(matchService.matchState?.team2.points, "40")
+        XCTAssertEqual(matchService.matchState?.isGoldenPoint, true)
+
+        matchService.pointWonByTeam1()
+
+        let state = try XCTUnwrap(matchService.matchState)
+        XCTAssertEqual(state.team1.setScore.first?.value, "1")
+        XCTAssertEqual(state.team2.setScore.first?.value, "0")
     }
 
+    func testUndoAfterCompletedGameRestoresPreviousPointScore() throws {
+        matchService.createMatch(.tennis,
+                                 players1: [.playerOne],
+                                 players2: [.playerTwo])
+
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam1()
+        matchService.pointWonByTeam1()
+        matchService.undoLastPoint()
+
+        let state = try XCTUnwrap(matchService.matchState)
+        XCTAssertEqual(state.team1.setScore.first?.value, "0")
+        XCTAssertEqual(state.team2.setScore.first?.value, "0")
+        XCTAssertEqual(state.team1.points, "40")
+        XCTAssertEqual(state.team2.points, "0")
+    }
 }

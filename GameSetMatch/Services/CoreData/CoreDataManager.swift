@@ -32,6 +32,15 @@ class CoreDataManager: ObservableObject {
     }
     
     private let context: NSManagedObjectContext
+    private enum EntityName {
+        static let game = "Game"
+        static let gamePoint = "GamePoint"
+        static let match = "Match"
+        static let matchSet = "MatchSet"
+        static let player = "Player"
+        static let rule = "Rule"
+        static let team = "Team"
+    }
     private var tennisRule: Rule!
     private var tennis2x2Rule: Rule!
     private var padelRule: Rule!
@@ -42,7 +51,7 @@ class CoreDataManager: ObservableObject {
     }
     
     private func createTennisRule() {
-        guard let rule = NSEntityDescription.insertNewObject(forEntityName: Rule.entity().name!, into: context) as? Rule else {
+        guard let rule = NSEntityDescription.insertNewObject(forEntityName: EntityName.rule, into: context) as? Rule else {
             fatalError("Can't create default rule")
         }
         let matchType = MatchType.tennis
@@ -60,7 +69,7 @@ class CoreDataManager: ObservableObject {
     }
     
     private func createTennis2x2Rule() {
-        guard let rule = NSEntityDescription.insertNewObject(forEntityName: Rule.entity().name!, into: context) as? Rule else {
+        guard let rule = NSEntityDescription.insertNewObject(forEntityName: EntityName.rule, into: context) as? Rule else {
             fatalError("Can't create default rule")
         }
         let matchType = MatchType.tennis2x2
@@ -78,7 +87,7 @@ class CoreDataManager: ObservableObject {
     }
     
     private func createPadelRule() {
-        guard let rule = NSEntityDescription.insertNewObject(forEntityName: Rule.entity().name!, into: context) as? Rule else {
+        guard let rule = NSEntityDescription.insertNewObject(forEntityName: EntityName.rule, into: context) as? Rule else {
             fatalError("Can't create default rule")
         }
         let matchType = MatchType.padel
@@ -138,7 +147,7 @@ class CoreDataManager: ObservableObject {
     }
     
     func createPlayer(_ player: MatchPlayer, autosave: Bool = true) throws -> Player {
-        guard let playerObject = NSEntityDescription.insertNewObject(forEntityName: Player.entity().name!, into: context) as? Player else {
+        guard let playerObject = NSEntityDescription.insertNewObject(forEntityName: EntityName.player, into: context) as? Player else {
             context.rollback()
             throw CoreDataManagerError.objectCreationFailed
         }
@@ -161,11 +170,10 @@ class CoreDataManager: ObservableObject {
     }
     
     private func createTeam(_ players: [MatchPlayer]) throws -> Team {
-        guard let team = NSEntityDescription.insertNewObject(forEntityName: Team.entity().name!, into: context) as? Team else {
+        guard let team = NSEntityDescription.insertNewObject(forEntityName: EntityName.team, into: context) as? Team else {
             context.rollback()
             throw CoreDataManagerError.objectCreationFailed
         }
-        
         team.id = UUID()
         try createPlayers(players)
             .forEach { player in
@@ -186,8 +194,8 @@ class CoreDataManager: ObservableObject {
     }
     
     private func customRuleObject(for customRule: CustomRule) throws -> Rule {
-        guard let rule = NSEntityDescription.insertNewObject(forEntityName: Rule.entity().name!, into: context) as? Rule else {
-            fatalError("Can't create default rule")
+        guard let rule = NSEntityDescription.insertNewObject(forEntityName: EntityName.rule, into: context) as? Rule else {
+            throw CoreDataManagerError.objectCreationFailed
         }
         rule.duration = customRule.duration
         rule.playMode = MatchType.custom.rawValue
@@ -203,7 +211,7 @@ class CoreDataManager: ObservableObject {
     }
     
     private func createMatchSet(createFirstGame: Bool = true) throws -> MatchSet {
-        guard let newSet = NSEntityDescription.insertNewObject(forEntityName: MatchSet.entity().name!, into: context) as? MatchSet else {
+        guard let newSet = NSEntityDescription.insertNewObject(forEntityName: EntityName.matchSet, into: context) as? MatchSet else {
             throw CoreDataManagerError.objectCreationFailed
         }
         if createFirstGame {
@@ -213,7 +221,7 @@ class CoreDataManager: ObservableObject {
     }
     
     private func createGame() throws -> Game {
-        guard let newGame = NSEntityDescription.insertNewObject(forEntityName: Game.entity().name!, into: context) as? Game else {
+        guard let newGame = NSEntityDescription.insertNewObject(forEntityName: EntityName.game, into: context) as? Game else {
             throw CoreDataManagerError.objectCreationFailed
         }
         newGame.isTieBreak = false
@@ -227,7 +235,7 @@ class CoreDataManager: ObservableObject {
         players1: [MatchPlayer] = [.playerOne, .playerOneB],
         players2: [MatchPlayer] = [.playerTwo, .playerTwoB]
     ) throws -> Match {
-        guard let newMatch = NSEntityDescription.insertNewObject(forEntityName: Match.entity().name!, into: context) as? Match else {
+        guard let newMatch = NSEntityDescription.insertNewObject(forEntityName: EntityName.match, into: context) as? Match else {
             throw CoreDataManagerError.objectCreationFailed
         }
         newMatch.id = UUID().uuidString
@@ -267,7 +275,7 @@ class CoreDataManager: ObservableObject {
     }
     
     func addNewPoint(in game: Game, servedBy: Player, wonBy: Team) throws {
-        guard let newPoint = NSEntityDescription.insertNewObject(forEntityName: GamePoint.entity().name!, into: context) as? GamePoint else {
+        guard let newPoint = NSEntityDescription.insertNewObject(forEntityName: EntityName.gamePoint, into: context) as? GamePoint else {
             throw CoreDataManagerError.objectCreationFailed
         }
         newPoint.servedBy = servedBy
@@ -370,6 +378,10 @@ class CoreDataManager: ObservableObject {
             }
             throw CoreDataManagerError.saveFailed
         }
+    }
+    
+    func rollback() {
+        context.rollback()
     }
     
     func migrateMatchId(_ match: Match) {

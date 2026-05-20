@@ -31,8 +31,11 @@ struct CreatePlayerView: View {
                 Spacer()
                 
                 Button {
-                    if let _ = try? coreDataManager.createPlayer(MatchPlayer(name: name, shortName: shortName)) {
+                    do {
+                        _ = try coreDataManager.createPlayer(MatchPlayer(name: name, shortName: shortName))
                         newPlayer = MatchPlayer(name: name, shortName: shortName)
+                    } catch {
+                        coreDataManager.rollback()
                     }
                 } label: {
                     Text("Create")

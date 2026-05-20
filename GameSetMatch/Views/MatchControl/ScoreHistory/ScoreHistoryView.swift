@@ -29,7 +29,7 @@ struct ScoreServingPlayer {
 }
 
 enum ScoreRow {
-    case regular(left: String, right: String, servingPlayer: ScoreServingPlayer?)
+    case regular(left: String, right: String, pointWonByTeam1: Bool, servingPlayer: ScoreServingPlayer?)
     case goldenPoint
 }
 
@@ -67,6 +67,7 @@ class ScoreHistoryViewModel: ObservableObject {
         if let match = matchService.match {
             calculateSections(match)
         }
+        subscribeToActiveMatch()
     }
     
     private func subscribeToActiveMatch() {
@@ -175,14 +176,18 @@ class ScoreHistoryViewModel: ObservableObject {
                             scoreServingPlayer = nil
                         }
                     }
-                    if point.winner == teams[0] {
+                    let pointWonByTeam1 = point.winner == teams[0]
+                    if pointWonByTeam1 {
                         team1Points += 1
                     } else {
                         team2Points += 1
                     }
                     
                     if game.isTieBreak {
-                        scores.append(.regular(left: "\(team1Points)", right: "\(team2Points)", servingPlayer: scoreServingPlayer))
+                        scores.append(.regular(left: "\(team1Points)",
+                                               right: "\(team2Points)",
+                                               pointWonByTeam1: pointWonByTeam1,
+                                               servingPlayer: scoreServingPlayer))
                     } else {
                         let isGoldenPoint = match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue
                         if max(team1Points, team2Points) > 3 {
@@ -190,15 +195,27 @@ class ScoreHistoryViewModel: ObservableObject {
                                 if isGoldenPoint {
                                     scores.append(.goldenPoint)
                                 } else {
-                                    scores.append(.regular(left: "40", right: "40", servingPlayer: nil))
+                                    scores.append(.regular(left: "40",
+                                                           right: "40",
+                                                           pointWonByTeam1: pointWonByTeam1,
+                                                           servingPlayer: nil))
                                 }
                             } else if team1Points > team2Points {
-                                scores.append(.regular(left: "AD", right: "-", servingPlayer: nil))
+                                scores.append(.regular(left: "AD",
+                                                       right: "-",
+                                                       pointWonByTeam1: pointWonByTeam1,
+                                                       servingPlayer: nil))
                             } else {
-                                scores.append(.regular(left: "-", right: "AD", servingPlayer: nil))
+                                scores.append(.regular(left: "-",
+                                                       right: "AD",
+                                                       pointWonByTeam1: pointWonByTeam1,
+                                                       servingPlayer: nil))
                             }
                         } else {
-                            scores.append(.regular(left: "\(self.pointsString(for: team1Points))", right: "\(self.pointsString(for: team2Points))", servingPlayer: nil))
+                            scores.append(.regular(left: "\(self.pointsString(for: team1Points))",
+                                                   right: "\(self.pointsString(for: team2Points))",
+                                                   pointWonByTeam1: pointWonByTeam1,
+                                                   servingPlayer: nil))
                         }
                     }
                 }
@@ -210,7 +227,9 @@ class ScoreHistoryViewModel: ObservableObject {
                     }
                     let team1TeamScore = TeamScore(value: "\(team1GamesWon)", hasWon: winner == teams[0])
                     let team2TeamScore = TeamScore(value: "\(team2GamesWon)", hasWon: winner != teams[0])
-                    scores.removeLast()
+                    if !scores.isEmpty {
+                        scores.removeLast()
+                    }
                     
                     gameSections.append(GameScoreSection(id: gameIndex,
                                                          scores: scores,
@@ -274,6 +293,41 @@ struct ScoreHistoryView: View {
         return (TeamScore(value: "0", hasWon: false), TeamScore(value: "0", hasWon: false))
     }
     
+    private func pointScoreText(_ value: String, isWinner: Bool) -> some View {
+        Text(value)
+            .frame(width: scoreWidth)
+            .multilineTextAlignment(.center)
+            .fontWeight(isWinner ? .bold : .regular)
+            .foregroundStyle(isWinner ? .green : .primary)
+    }
+    
+    private func regularScoreRow(left: String, right: String, pointWonByTeam1: Bool, servingPlayer: ScoreServingPlayer?) -> some View {
+        ZStack {
+            HStack {
+                Spacer()
+                pointScoreText(left, isWinner: pointWonByTeam1)
+                Text(":")
+                    .frame(width: separatorWidth)
+                    .multilineTextAlignment(.center)
+                pointScoreText(right, isWinner: !pointWonByTeam1)
+                Spacer()
+            }
+            if let servingPlayer {
+                HStack {
+                    if servingPlayer.alignment == .right {
+                        Spacer()
+                    }
+                    Text(servingPlayer.playerName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if servingPlayer.alignment == .left {
+                        Spacer()
+                    }
+                }
+            }
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -314,35 +368,11 @@ struct ScoreHistoryView: View {
                                 Section {
                                     ForEach(Array(game.scores.enumerated()), id: \.offset) { index, score in
                                         switch score {
-                                        case .regular(let left, let right, let servingPlayer):
-                                            ZStack {
-                                                HStack {
-                                                    Spacer()
-                                                    Text(left)
-                                                        .frame(width: scoreWidth)
-                                                        .multilineTextAlignment(.center)
-                                                    Text(":")
-                                                        .frame(width: separatorWidth)
-                                                        .multilineTextAlignment(.center)
-                                                    Text(right)
-                                                        .frame(width: scoreWidth)
-                                                        .multilineTextAlignment(.center)
-                                                    Spacer()
-                                                }
-                                                if let servingPlayer {
-                                                    HStack {
-                                                        if servingPlayer.alignment == .right {
-                                                            Spacer()
-                                                        }
-                                                        Text(servingPlayer.playerName)
-                                                            .font(.caption)
-                                                            .foregroundStyle(.secondary)
-                                                        if servingPlayer.alignment == .left {
-                                                            Spacer()
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                        case .regular(let left, let right, let pointWonByTeam1, let servingPlayer):
+                                            regularScoreRow(left: left,
+                                                            right: right,
+                                                            pointWonByTeam1: pointWonByTeam1,
+                                                            servingPlayer: servingPlayer)
                                         case .goldenPoint:
                                             HStack {
                                                 Spacer()

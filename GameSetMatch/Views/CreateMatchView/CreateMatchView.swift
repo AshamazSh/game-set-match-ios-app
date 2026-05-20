@@ -335,10 +335,10 @@ struct CreateMatchView: View {
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 Button {
-                    matchService.match = try? coreDataManager.createMatch(customRule.matchType,
-                                                                          customRule: customRule.matchType == .custom ? customRule : nil,
-                                                                          players1: Array(team1.players().prefix(isSingleMatch ? 1 : 2)),
-                                                                          players2: Array(team2.players().prefix(isSingleMatch ? 1 : 2)))
+                    matchService.createMatch(customRule.matchType,
+                                             customRule: customRule.matchType == .custom ? customRule : nil,
+                                             players1: Array(team1.players().prefix(isSingleMatch ? 1 : 2)),
+                                             players2: Array(team2.players().prefix(isSingleMatch ? 1 : 2)))
                 } label: {
                     Text("Create")
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44, maxHeight: 44)
@@ -367,6 +367,7 @@ struct CreateMatchView: View {
             .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { taskState in
                 if let statuses = taskState.value {
                     isSubscribed = SubscriptionsService.hasSubscription(in: statuses)
+                    isSubscribed = true
                 }
             }
             .task {

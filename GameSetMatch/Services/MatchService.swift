@@ -12,11 +12,11 @@ extension ServingPlayer {
     func team1ServingPlayer(players: [Player]) -> Player? {
         switch self {
         case .t1p1:
-            return players[0]
+            return players.first
         case .t2p1:
             return nil
         case .t1p2:
-            return players.count > 1 ? players[1] : players[0]
+            return players.count > 1 ? players[1] : players.first
         case .t2p2:
             return nil
         }
@@ -27,11 +27,11 @@ extension ServingPlayer {
         case .t1p1:
             return nil
         case .t2p1:
-            return players[0]
+            return players.first
         case .t1p2:
             return nil
         case .t2p2:
-            return players.count > 1 ? players[1] : players[0]
+            return players.count > 1 ? players[1] : players.first
         }
     }
     
@@ -94,25 +94,25 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
     
     private func subscribeToConnectivityManager() {
         connectivityManager
-            .objectWillChange
+            .$requestedAction
+            .compactMap { $0 }
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
+            .sink { [weak self] action in
                 guard let self else { return }
                 defer {
                     self.connectivityManager.sendState(self.matchState)
+                    self.connectivityManager.requestedAction = nil
                 }
-                switch self.connectivityManager.requestedAction {
+                switch action {
                 case .createTennisMatch:
                     guard self.match == nil else { return }
-                    self.match = try? self.coreDataManager.createMatch(.tennis,
-                                                                       players1: [.playerOne],
-                                                                       players2: [.playerTwo])
+                    self.createMatch(.tennis, players1: [.playerOne], players2: [.playerTwo])
                 case .createTennis2x2Match:
                     guard self.match == nil else { return }
-                    self.match = try? self.coreDataManager.createMatch(.tennis2x2)
+                    self.createMatch(.tennis2x2)
                 case .createPadelMatch:
                     guard self.match == nil else { return }
-                    self.match = try? self.coreDataManager.createMatch(.padel)
+                    self.createMatch(.padel)
                 case .undo:
                     guard let matchState = self.matchState,
                           !matchState.isCompleted else { return }
@@ -133,6 +133,27 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
                 }
             }
             .store(in: &cancellables)
+    }
+    
+    func createMatch(
+        _ type: MatchType,
+        customRule: CustomRule? = nil,
+        players1: [MatchPlayer] = [.playerOne, .playerOneB],
+        players2: [MatchPlayer] = [.playerTwo, .playerTwoB]
+    ) {
+        do {
+            match = try coreDataManager.createMatch(type, customRule: customRule, players1: players1, players2: players2)
+        } catch {
+            coreDataManager.rollback()
+        }
+    }
+    
+    func replayMatch(_ match: Match) {
+        do {
+            self.match = try coreDataManager.replayMatch(match)
+        } catch {
+            coreDataManager.rollback()
+        }
     }
     
     private func matchDidChange() {
@@ -157,7 +178,11 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
     
     func undoLastPoint() {
         if let match {
-            try? coreDataManager.deleteLastPoint(in: match)
+            do {
+                try coreDataManager.deleteLastPoint(in: match)
+            } catch {
+                coreDataManager.rollback()
+            }
         }
     }
     
@@ -312,6 +337,7 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
         guard let matchState,
               let match,
               match.winner == nil,
+              teams.indices.contains(winnerTeamIndex),
               let lastSet = match.sets.lastObject as? MatchSet,
               let lastGame = lastSet.games.lastObject as? Game else {
             return
@@ -340,24 +366,44 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
                     swap(&wonTeamTotalSets, &lostTeamTotalSets)
                 }
                 wonTeamTotalSets += 1
-                try? coreDataManager.setFinalScore(wonTeamTotalSets, team: teams[winnerTeamIndex])
-                try? coreDataManager.setFinalScore(lostTeamTotalSets, team: teams[winnerTeamIndex == 1 ? 0 : 1])
-                if wonTeamTotalSets > match.rule.duration - wonTeamTotalSets + lostTeamTotalSets ||
-                    match.rule.duration <= wonTeamTotalSets + lostTeamTotalSets {
-                    try? coreDataManager.matchOver(match, withWinner: winnerTeam)
-                } else {
-                    try? coreDataManager.addNewMatchSet(in: match)
+                do {
+                    try coreDataManager.setFinalScore(wonTeamTotalSets, team: teams[winnerTeamIndex])
+                    try coreDataManager.setFinalScore(lostTeamTotalSets, team: teams[winnerTeamIndex == 1 ? 0 : 1])
+                    if wonTeamTotalSets > match.rule.duration - wonTeamTotalSets + lostTeamTotalSets ||
+                        match.rule.duration <= wonTeamTotalSets + lostTeamTotalSets {
+                        try coreDataManager.matchOver(match, withWinner: winnerTeam)
+                    } else {
+                        try coreDataManager.addNewMatchSet(in: match)
+                    }
+                    try coreDataManager.setWon(lastSet, by: winnerTeam)
+                } catch {
+                    coreDataManager.rollback()
+                    return
                 }
-                try? coreDataManager.setWon(lastSet, by: winnerTeam)
             } else {
                 let nextGameIsTieBreak = match.rule.tieBreak == SetTieBreak.fullTieBreak.rawValue && wonTeamSetScore == 6 && lostTeamSetScore == 6
                 
-                try? coreDataManager.addNewGame(in: lastSet, isTieBreak: nextGameIsTieBreak)
+                do {
+                    try coreDataManager.addNewGame(in: lastSet, isTieBreak: nextGameIsTieBreak)
+                } catch {
+                    coreDataManager.rollback()
+                    return
+                }
             }
-            try? coreDataManager.gameWon(lastGame, by: winnerTeam)
+            do {
+                try coreDataManager.gameWon(lastGame, by: winnerTeam)
+            } catch {
+                coreDataManager.rollback()
+                return
+            }
         }
         
-        try? coreDataManager.addNewPoint(in: lastGame, servedBy: currentServingPlayer(in: matchState), wonBy: winnerTeam)
+        guard let servingPlayer = currentServingPlayer(in: matchState) else { return }
+        do {
+            try coreDataManager.addNewPoint(in: lastGame, servedBy: servingPlayer, wonBy: winnerTeam)
+        } catch {
+            coreDataManager.rollback()
+        }
     }
     
     func pointWonByTeam1() {
@@ -368,7 +414,7 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
         pointWon(byTeamIndex: 1)
     }
     
-    private func currentServingPlayer(in matchState: MatchState) -> Player {
+    private func currentServingPlayer(in matchState: MatchState) -> Player? {
         if let servingPlayerId = matchState.team1.servingPlayer?.id {
             return player(inTeam: teams[0], byId: servingPlayerId)
         } else {
@@ -376,7 +422,8 @@ class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelega
         }
     }
     
-    private func player(inTeam team: Team, byId id: UUID?) -> Player {
-        return team.players.allObjectsOfType(Player.self).first { $0.id == id } ?? team.players.allObjectsOfType(Player.self)[0]
+    private func player(inTeam team: Team, byId id: UUID?) -> Player? {
+        let players = team.players.allObjectsOfType(Player.self)
+        return players.first { $0.id == id } ?? players.first
     }
 }

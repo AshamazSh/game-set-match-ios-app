@@ -120,7 +120,11 @@ struct MatchesHistoryView: View {
                             for index in indexSet {
                                 context.delete(pair.1[index])
                             }
-                            try? context.save()
+                            do {
+                                try context.save()
+                            } catch {
+                                context.rollback()
+                            }
                         }
                     }
                 }
@@ -152,12 +156,16 @@ struct MatchesHistoryView: View {
                 Alert(
                     title: Text("Delete all matches?"),
                     message: Text("This action can't be reverted"),
-                    primaryButton: .destructive(Text("Yes"), action: {
-                        for match in matches {
-                            context.delete(match)
-                        }
-                        try? context.save()
-                    }),
+                        primaryButton: .destructive(Text("Yes"), action: {
+                            for match in matches {
+                                context.delete(match)
+                            }
+                            do {
+                                try context.save()
+                            } catch {
+                                context.rollback()
+                            }
+                        }),
                     secondaryButton: .cancel()
                 )
             }

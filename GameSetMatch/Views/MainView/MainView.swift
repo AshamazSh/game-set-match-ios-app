@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MainView: View {
     @ObservedObject var matchService: MatchService
+    @ObservedObject var coreDataManager: CoreDataManager
     @Environment(\.managedObjectContext) private var context
     private var showMatch: Bool {
         matchService.matchState != nil
@@ -21,7 +22,7 @@ struct MainView: View {
         ZStack {
             TabView(selection: $selectedTab) {
                 CreateMatchView(context: context)
-                    .environmentObject(CoreDataManager(context: context))
+                    .environmentObject(coreDataManager)
                     .environmentObject(matchService)
                     .tabItem {
                         Label("New match", systemImage: "figure.tennis")
@@ -38,7 +39,6 @@ struct MainView: View {
             .ignoresSafeArea()
             
             MatchControl(matchService: matchService)
-                .environmentObject(CoreDataManager(context: context))
                 .flipRotate(-180 + flipDegrees)
                 .opacity(showMatch ? 1.0 : 0.0)
                 .ignoresSafeArea()

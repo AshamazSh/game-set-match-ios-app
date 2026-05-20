@@ -11,14 +11,23 @@ struct TeamSetsScoreView: View {
     let setScore: [MatchState.TeamInfo.SetScore]
     let layoutDirection: LayoutDirection
     let onScreen: TeamScoreView.OnScreenPosition
+    private var scoresSpacing: CGFloat {
+        layoutDirection.isVertical ? 12 : 8
+    }
     
     private var contentViews: some View {
-        ForEach(setScore) { item in
+        ForEach(Array(setScore.enumerated()), id: \.element.id) { index, item in
+            let isCurrentSet = index == setScore.count - 1 && !item.won
             Text(item.value)
                 .font(.body)
-                .foregroundStyle(item.won
-                                 ? .green
-                                 : .secondary)
+                .fontWeight(isCurrentSet ? .semibold : .regular)
+                .foregroundStyle(item.won ? .green : (isCurrentSet ? .primary : .secondary))
+            if index < setScore.count - 1 {
+                Rectangle()
+                    .fill(.separator)
+                    .frame(width: layoutDirection.isVertical ? 1 : 18,
+                           height: layoutDirection.isVertical ? 18 : 1)
+            }
         }
     }
     
@@ -28,7 +37,7 @@ struct TeamSetsScoreView: View {
                 if onScreen == .topOrLeading {
                     Spacer()
                 }
-                HStack(spacing: 8) {
+                HStack(spacing: scoresSpacing) {
                     contentViews
                     Spacer()
                 }

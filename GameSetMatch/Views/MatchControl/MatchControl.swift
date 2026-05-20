@@ -9,7 +9,6 @@ import SwiftUI
 
 struct MatchControl: View {
     @ObservedObject var matchService: MatchService
-    @EnvironmentObject private var coreDataManager: CoreDataManager
     private var layoutDirection: LayoutDirection {
         layout ?? .vertical
     }
@@ -69,7 +68,7 @@ struct MatchControl: View {
                        isSubscribed {
                         ToolbarItem(placement: .topBarLeading) {
                             Button("Play again") {
-                                matchService.match = try? coreDataManager.replayMatch(match)
+                                matchService.replayMatch(match)
                             }
                         }
                     }
