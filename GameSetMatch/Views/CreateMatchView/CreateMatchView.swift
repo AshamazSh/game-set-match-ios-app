@@ -208,6 +208,12 @@ struct CreateMatchView: View {
             }
             .foregroundStyle(.primary)
             Spacer()
+            if !isSingleMatch,
+               selectedPlayer == .team1player1 || selectedPlayer == .team2player1 {
+                Text("Serves first")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Image(systemName: "chevron.right")
                 .foregroundStyle(.secondary)
         }
