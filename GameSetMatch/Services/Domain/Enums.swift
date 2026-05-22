@@ -64,7 +64,7 @@ enum FortyAllRule: Int32, CaseIterable, Identifiable {
         case .goldenPoint:
             return "Golden point"
         case .startPoint:
-            return "Start point"
+            return "Star point"
         case .advantages:
             return "Advantages"
         }
