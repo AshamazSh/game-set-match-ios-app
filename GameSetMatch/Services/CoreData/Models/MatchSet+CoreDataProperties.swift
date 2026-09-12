@@ -16,6 +16,7 @@ extension MatchSet {
         return NSFetchRequest<MatchSet>(entityName: "MatchSet")
     }
 
+    @NSManaged public var isSuperTieBreak: Bool
     @NSManaged public var games: NSOrderedSet
     @NSManaged public var match: Match
     @NSManaged public var nextSet: MatchSet?

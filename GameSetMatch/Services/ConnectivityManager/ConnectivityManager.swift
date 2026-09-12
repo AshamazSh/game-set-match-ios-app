@@ -6,6 +6,7 @@ struct WatchCommand {
     let requestID: String?
     let matchID: String?
     let revision: Int64?
+    var configuration: MatchConfiguration? = nil
 }
 
 enum CommandError: LocalizedError {
@@ -80,8 +81,13 @@ final class ConnectivityManager: NSObject, ObservableObject, WCSessionDelegate, 
             guard let raw = message["request"] as? String, let action = AppRequest(rawValue: raw), action.isWatchRequest,
                   let onCommand else { throw CommandError.invalidRequest }
             if !(requestID.map { handledRequests.contains($0) } ?? false) {
+                var configuration: MatchConfiguration?
+                if action == .createMatch {
+                    guard let object = message["configuration"] as? [String: Any] else { throw CommandError.invalidRequest }
+                    configuration = try JSONDecoder().decode(MatchConfiguration.self, from: JSONSerialization.data(withJSONObject: object))
+                }
                 try onCommand(WatchCommand(action: action, requestID: requestID,
-                    matchID: message["matchID"] as? String, revision: (message["revision"] as? NSNumber)?.int64Value))
+                    matchID: message["matchID"] as? String, revision: (message["revision"] as? NSNumber)?.int64Value, configuration: configuration))
                 if let requestID {
                     handledRequests.append(requestID)
                     if handledRequests.count > 256 { handledRequests.removeFirst() }

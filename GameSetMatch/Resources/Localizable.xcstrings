@@ -1,105 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Best of sets:": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Максимум сетов:"
-          }
-        }
-      }
-    },
-    "Unable to complete action": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось выполнить действие"
-          }
-        }
-      }
-    },
-    "OK": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ОК"
-          }
-        }
-      }
-    },
-    "The match data is incomplete.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Данные матча неполные."
-          }
-        }
-      }
-    },
-    "Choose an odd number of sets between 1 and 9.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите нечётное число сетов от 1 до 9."
-          }
-        }
-      }
-    },
-    "The match has changed. Check the score and try again.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Матч изменился. Проверьте счёт и повторите действие."
-          }
-        }
-      }
-    },
-    "Unable to process the watch request.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось обработать запрос с часов."
-          }
-        }
-      }
-    },
-    "Connect to your iPhone and try again.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Подключитесь к iPhone и повторите действие."
-          }
-        }
-      }
-    },
-    "Could not confirm the action. Check the score on your iPhone before trying again.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось подтвердить действие. Проверьте счёт на iPhone перед повторной попыткой."
-          }
-        }
-      }
-    },
     "" : {
 
     },
@@ -149,12 +50,111 @@
         }
       }
     },
+    "At 40:40" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При счёте 40:40"
+          }
+        }
+      }
+    },
+    "At 40:40, the next point wins the game." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При 40:40 следующий мяч решает исход гейма."
+          }
+        }
+      }
+    },
+    "At 40:40, win two consecutive points to win the game." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При 40:40 нужно выиграть два мяча подряд. Число возвратов к равенству не ограничено."
+          }
+        }
+      }
+    },
+    "At equal sets, play the deciding set as a tiebreak to 10, with a two-point lead." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При равенстве по сетам решающий сет — тай-брейк до 10 очков с отрывом в два очка."
+          }
+        }
+      }
+    },
+    "Best of sets:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Максимум сетов:"
+          }
+        }
+      }
+    },
+    "Choose 1, 3 or 5 sets." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите 1, 3 или 5 сетов."
+          }
+        }
+      }
+    },
+    "Choose an odd number of sets between 1 and 9." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите нечётное число сетов от 1 до 9."
+          }
+        }
+      }
+    },
     "Clear" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Очистить"
+          }
+        }
+      }
+    },
+    "Connect to your iPhone and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключитесь к iPhone и повторите действие."
+          }
+        }
+      }
+    },
+    "Could not confirm the action. Check the score on your iPhone before trying again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось подтвердить действие. Проверьте счёт на iPhone перед повторной попыткой."
           }
         }
       }
@@ -192,6 +192,17 @@
         }
       }
     },
+    "Deciding set" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Решающий сет"
+          }
+        }
+      }
+    },
     "Delete all matches?" : {
       "localizations" : {
         "ru" : {
@@ -220,6 +231,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Закончить матч?"
+          }
+        }
+      }
+    },
+    "Format" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Формат"
           }
         }
       }
@@ -352,6 +374,17 @@
         }
       }
     },
+    "Normal set" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обычный сет"
+          }
+        }
+      }
+    },
     "Number of sets" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -359,6 +392,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Количество сетов"
+          }
+        }
+      }
+    },
+    "OK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ОК"
           }
         }
       }
@@ -384,7 +428,19 @@
         }
       }
     },
+    "Play the deciding set normally, with a tiebreak to 7 at 6:6." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Решающий сет играется обычно: при 6:6 — тай-брейк до 7 очков с отрывом в два очка."
+          }
+        }
+      }
+    },
     "Played on 6:6" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ru" : {
           "stringUnit" : {
@@ -395,6 +451,7 @@
       }
     },
     "Played on 40:40" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ru" : {
           "stringUnit" : {
@@ -460,6 +517,7 @@
       }
     },
     "Rules" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ru" : {
           "stringUnit" : {
@@ -497,6 +555,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Сокращенное имя"
+          }
+        }
+      }
+    },
+    "Super tiebreak" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Супер тай-брейк"
           }
         }
       }
@@ -545,6 +614,28 @@
         }
       }
     },
+    "The match data is incomplete." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Данные матча неполные."
+          }
+        }
+      }
+    },
+    "The match has changed. Check the score and try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Матч изменился. Проверьте счёт и повторите действие."
+          }
+        }
+      }
+    },
     "This action can't be reverted" : {
       "localizations" : {
         "ru" : {
@@ -576,6 +667,39 @@
         }
       }
     },
+    "Two rounds of advantage. At the third deuce, the next point wins the game." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Два раза играем «больше-меньше». При третьем равенстве — решающий мяч."
+          }
+        }
+      }
+    },
+    "Unable to complete action" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось выполнить действие"
+          }
+        }
+      }
+    },
+    "Unable to process the watch request." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось обработать запрос с часов."
+          }
+        }
+      }
+    },
     "Undo" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -583,6 +707,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Вернуть"
+          }
+        }
+      }
+    },
+    "With one set, play a normal set with a tiebreak to 7 at 6:6." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При одном сете играем обычный сет: при 6:6 — тай-брейк до 7 очков с отрывом в два очка."
           }
         }
       }

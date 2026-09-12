@@ -60,6 +60,11 @@ struct MatchControl: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if matchState?.isSuperTieBreak == true {
+                    ToolbarItem(placement: .principal) { Text("Super tiebreak").font(.caption) }
+                } else if let rule = matchState?.decidingPointRule {
+                    ToolbarItem(placement: .principal) { Text(rule.title).font(.caption) }
+                }
                 if let match = matchService.match {
                     ToolbarItem(placement: .topBarLeading) {
                         undoButton

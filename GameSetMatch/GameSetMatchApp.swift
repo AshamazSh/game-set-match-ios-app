@@ -9,11 +9,17 @@ final class AppDependencies: ObservableObject {
     let matchService: MatchService
 
     init() {
-        persistence = PersistenceController.shared
+        #if DEBUG
+        let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        #else
+        let isUITesting = false
+        #endif
+        let defaults = isUITesting ? UserDefaults(suiteName: "UITests.\(UUID().uuidString)")! : .standard
+        persistence = isUITesting ? PersistenceController(inMemory: true) : .shared
         repository = CoreDataManager(context: persistence.container.viewContext)
-        connectivity = ConnectivityManager()
+        connectivity = ConnectivityManager(defaults: defaults, activate: !isUITesting)
         matchService = MatchService(context: persistence.container.viewContext,
-                                    coreDataManager: repository, connectivityManager: connectivity)
+                                    coreDataManager: repository, connectivityManager: connectivity, defaults: defaults)
     }
 }
 

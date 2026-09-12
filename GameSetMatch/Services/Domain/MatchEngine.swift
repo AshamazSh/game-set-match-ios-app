@@ -2,11 +2,12 @@ import Foundation
 
 /// Value types shared by scoring and persistence. No UI or managed objects.
 struct MatchRules: Equatable {
-    var bestOf: Int32 = 1
-    var goldenPoint = false
+    var bestOf: Int32 = 3
+    var deuceRule: DeuceRule = .star
+    var superTieBreak = false
     var tieBreak = true
 
-    var isValid: Bool { (1...9).contains(bestOf) && bestOf % 2 == 1 }
+    var isValid: Bool { MatchConfiguration.allowedSets.contains(bestOf) }
     // Legacy even durations require a majority, so a tied match cannot have a winner.
     var setsToWin: Int32 { max(1, bestOf / 2 + 1) }
 }
@@ -29,18 +30,32 @@ enum MatchEngine {
     }
 
     static func pointOutcome(team: Int, points: Score, games: Score, sets: Score,
-                             isTieBreak: Bool, rules: MatchRules) -> Outcome {
+                             isTieBreak: Bool, rules: MatchRules, tieBreakTarget: Int32 = 7) -> Outcome {
         let next = points.addingPoint(to: team)
         let won = next.value(for: team)
         let lost = next.value(for: 1 - team)
-        let gameWon = isTieBreak ? won >= 7 && won - lost >= 2
-            : won >= 4 && (won - lost >= 2 || rules.goldenPoint)
+        let gameWon = isTieBreak ? won >= tieBreakTarget && won - lost >= 2
+            : won >= 4 && (won - lost >= 2 || isDecidingPoint(points, rule: rules.deuceRule))
         let nextGames = games.addingPoint(to: team)
         let setWon = gameWon && (isTieBreak || (nextGames.value(for: team) >= 6 &&
             (!rules.tieBreak || nextGames.value(for: team) - nextGames.value(for: 1 - team) >= 2)))
         return Outcome(gameWon: gameWon, setWon: setWon,
                        matchWon: setWon && sets.value(for: team) + 1 >= rules.setsToWin,
                        nextGameIsTieBreak: gameWon && !setWon && rules.tieBreak && nextGames == Score(first: 6, second: 6))
+    }
+
+    static func isDecidingPoint(_ points: Score, rule: DeuceRule) -> Bool {
+        guard points.first == points.second else { return false }
+        switch rule {
+        case .golden: return points.first >= 3
+        case .star: return points.first >= 5
+        case .advantage: return false
+        }
+    }
+
+    static func shouldPlaySuperTieBreak(sets: Score, rules: MatchRules) -> Bool {
+        rules.superTieBreak && rules.bestOf > 1 && sets.first == sets.second
+            && sets.first == rules.setsToWin - 1
     }
 
     /// A tiebreak counts as one service game when continuing into the next set.

@@ -37,4 +37,21 @@ final class GameSetMatchWatch_Watch_AppTests: XCTestCase {
         manager.processMessage(["request": AppRequest.newState.rawValue, "snapshotVersion": Int64(2), "object": [:]])
         XCTAssertEqual(manager.matchState?.team1.points, "15")
     }
+    @MainActor func testNewRuleIndicatorsDecodeWithoutBreakingLegacySnapshots() throws {
+        let manager = WatchConnectivityManager(activate: false)
+        var state = MatchState.empty
+        state.isSuperTieBreak = true
+        state.decidingPointRule = .star
+        manager.processMessage(["request": AppRequest.newState.rawValue, "snapshotVersion": Int64(1),
+            "object": try JSONSerialization.jsonObject(with: JSONEncoder().encode(state))])
+        XCTAssertTrue(manager.matchState?.isSuperTieBreak == true)
+        XCTAssertEqual(manager.matchState?.decidingPointRule, .star)
+        var oldObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(MatchState.empty)) as! [String: Any]
+        oldObject.removeValue(forKey: "isSuperTieBreak")
+        oldObject.removeValue(forKey: "decidingPointRule")
+        manager.processMessage(["request": AppRequest.newState.rawValue, "snapshotVersion": Int64(2), "object": oldObject])
+        XCTAssertNil(manager.matchState?.isSuperTieBreak)
+        XCTAssertNil(manager.matchState?.decidingPointRule)
+    }
+
 }

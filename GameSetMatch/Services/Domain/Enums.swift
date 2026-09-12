@@ -64,6 +64,7 @@ enum AppRequest: String, CaseIterable, Identifiable {
         self.rawValue
     }
     
+    case createMatch
     case createTennisMatch
     case createTennis2x2Match
     case createPadelMatch
@@ -79,7 +80,7 @@ enum AppRequest: String, CaseIterable, Identifiable {
     
     var isWatchRequest: Bool {
         switch self {
-        case .createTennisMatch,
+        case .createMatch, .createTennisMatch,
                 .createTennis2x2Match,
                 .createPadelMatch,
                 .undo,
@@ -93,5 +94,46 @@ enum AppRequest: String, CaseIterable, Identifiable {
                 .ignored:
             return false
         }
+    }
+}
+
+/// Stable stored/wire values, independent of translated labels.
+enum MatchFormat: String, CaseIterable, Codable, Identifiable {
+    case singles, doubles
+    var id: Self { self }
+    var title: String { self == .singles ? "1×1" : "2×2" }
+    var playerCount: Int { self == .singles ? 1 : 2 }
+}
+
+enum DeuceRule: String, CaseIterable, Codable, Identifiable {
+    case star, golden, advantage
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .star: return "Star point"
+        case .golden: return "Golden point"
+        case .advantage: return "Adv"
+        }
+    }
+    var explanation: String {
+        switch self {
+        case .star: return String(localized: "Two rounds of advantage. At the third deuce, the next point wins the game.")
+        case .golden: return String(localized: "At 40:40, the next point wins the game.")
+        case .advantage: return String(localized: "At 40:40, win two consecutive points to win the game.")
+        }
+    }
+}
+
+struct MatchConfiguration: Codable, Equatable {
+    var format: MatchFormat = .singles
+    var sets: Int32 = 3
+    var superTieBreak = false
+    var deuceRule: DeuceRule = .star
+    static let allowedSets: [Int32] = [1, 3, 5]
+    var isValid: Bool { Self.allowedSets.contains(sets) }
+    var decidingSetExplanation: String {
+        superTieBreak
+            ? String(localized: "At equal sets, play the deciding set as a tiebreak to 10, with a two-point lead.")
+            : String(localized: "Play the deciding set normally, with a tiebreak to 7 at 6:6.")
     }
 }

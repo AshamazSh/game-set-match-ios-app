@@ -34,9 +34,10 @@ private final class Harness {
         service = MatchService(context: context, coreDataManager: repository, connectivityManager: transport, defaults: defaults)
     }
 
-    func create(bestOf: Int32 = 1, golden: Bool = false, doubles: Bool = false) throws -> Match {
-        let match = try repository.createMatch(.custom,
-            customRule: CustomRule(duration: bestOf, goldenRule: golden, matchType: .custom),
+    func create(bestOf: Int32 = 1, golden: Bool = false, doubles: Bool = false, deuce: DeuceRule? = nil, superTieBreak: Bool = false) throws -> Match {
+        let match = try repository.createMatch(
+            configuration: MatchConfiguration(format: doubles ? .doubles : .singles, sets: bestOf,
+                superTieBreak: superTieBreak, deuceRule: deuce ?? (golden ? .golden : .advantage)),
             players1: doubles ? [.playerOne, .playerOneB] : [.playerOne],
             players2: doubles ? [.playerTwo, .playerTwoB] : [.playerTwo])
         service.match = match
@@ -71,12 +72,12 @@ final class GameSetMatchTests: XCTestCase {
         XCTAssertEqual(MatchEngine.displayPoints(.init(first: 4, second: 3), isTieBreak: false).0, "AD")
         XCTAssertEqual(MatchEngine.displayPoints(.init(first: 4, second: 4), isTieBreak: false).0, "40")
         XCTAssertTrue(MatchEngine.pointOutcome(team: 0, points: .init(first: 4, second: 3), games: .init(), sets: .init(), isTieBreak: false, rules: .init()).gameWon)
-        XCTAssertTrue(MatchEngine.pointOutcome(team: 1, points: deuce, games: .init(), sets: .init(), isTieBreak: false, rules: .init(goldenPoint: true)).gameWon)
+        XCTAssertTrue(MatchEngine.pointOutcome(team: 1, points: deuce, games: .init(), sets: .init(), isTieBreak: false, rules: .init(bestOf: 1, deuceRule: .golden)).gameWon)
     }
 
     func testTieBreakNeedsTwoPointLead() {
         XCTAssertFalse(MatchEngine.pointOutcome(team: 0, points: .init(first: 6, second: 6), games: .init(first: 6, second: 6), sets: .init(), isTieBreak: true, rules: .init()).gameWon)
-        XCTAssertTrue(MatchEngine.pointOutcome(team: 0, points: .init(first: 7, second: 6), games: .init(first: 6, second: 6), sets: .init(), isTieBreak: true, rules: .init()).matchWon)
+        XCTAssertTrue(MatchEngine.pointOutcome(team: 0, points: .init(first: 7, second: 6), games: .init(first: 6, second: 6), sets: .init(), isTieBreak: true, rules: .init(bestOf: 1)).matchWon)
     }
 
     func testServiceRotationIncludingTieBreak() {
@@ -289,18 +290,19 @@ final class GameSetMatchTests: XCTestCase {
         XCTAssertEqual(groups[0].1.count, 2)
     }
 
-    @MainActor func testPresetEditsKeepCustomValuesSynchronously() {
+    @MainActor func testNewConfigurationDefaultsAndIndependentOptions() {
         let rules = CustomRule()
-        rules.duration = 5
-        XCTAssertEqual(rules.matchType, .custom)
-        XCTAssertEqual(rules.duration, 5)
-        rules.matchType = .padel
-        XCTAssertTrue(rules.goldenRule)
-        XCTAssertEqual(rules.duration, 1)
-        XCTAssertEqual(rules.playMode, .double)
-        rules.goldenRule = false
-        XCTAssertEqual(rules.matchType, .custom)
-        XCTAssertFalse(rules.goldenRule)
+        XCTAssertEqual(rules.configuration.format, .singles)
+        XCTAssertEqual(rules.configuration.sets, 3)
+        XCTAssertEqual(rules.configuration.deuceRule, .star)
+        XCTAssertFalse(rules.configuration.superTieBreak)
+        rules.configuration.sets = 5
+        rules.configuration.format = .doubles
+        rules.configuration.superTieBreak = true
+        rules.configuration.deuceRule = .golden
+        XCTAssertEqual(rules.configuration.sets, 5)
+        XCTAssertEqual(rules.configuration.format.playerCount, 2)
+        XCTAssertTrue(rules.configuration.superTieBreak)
     }
 
     @MainActor func testGoldenPointPersistsAndUndoRestoresDeuce() throws {
@@ -317,7 +319,7 @@ final class GameSetMatchTests: XCTestCase {
 
     @MainActor func testInvalidDurationsAreRejected() throws {
         let h = try Harness()
-        XCTAssertThrowsError(try h.create(bestOf: 2))
+        for count: Int32 in [0, 2, 4, 7, 9] { XCTAssertThrowsError(try h.create(bestOf: count)) }
         XCTAssertEqual(try h.context.count(for: Match.fetchRequest()), 0)
     }
 
@@ -355,10 +357,203 @@ final class GameSetMatchTests: XCTestCase {
         let matches = try context.fetch(Match.fetchRequest())
         XCTAssertEqual(matches.count, 2)
         XCTAssertEqual(matches[0].revision, 0)
+        XCTAssertNil(matches[0].rule.deuceRuleCode)
+        XCTAssertNil(matches[0].rule.formatCode)
+        XCTAssertFalse(matches[0].rule.superTieBreak)
+        XCTAssertEqual(repository.rules(for: matches[0]).deuceRule, .advantage)
         XCTAssertEqual(matches[0].rule, matches[1].rule)
         try repository.deleteMatches([matches[0]])
         XCTAssertEqual(try context.fetch(Match.fetchRequest()).first?.rule.name, "Теннис")
         context.reset()
         try newCoordinator.remove(newStore)
     }
+    @MainActor func testStarPointDecidesOnlyAtThirdDeuceAndUndoRestoresIt() throws {
+        let h = try Harness(), match = try h.create(deuce: .star)
+        for round in 0..<5 {
+            h.service.pointWonByTeam1()
+            h.service.pointWonByTeam2()
+            XCTAssertNil((match.sets.firstObject as? MatchSet)?.games.firstObject.flatMap { ($0 as? Game)?.winner })
+            XCTAssertEqual(h.service.matchState?.isGoldenPoint, round == 4)
+        }
+        XCTAssertEqual(h.service.matchState?.decidingPointRule, .star)
+        XCTAssertEqual(h.service.matchState?.team1.points, "40")
+        let history = ScoreHistoryViewModel(matchService: h.service)
+        guard case .decidingPoint(.star) = history.sections[0].games[0].scores.last else { return XCTFail("Missing Star point label") }
+        h.service.pointWonByTeam2()
+        XCTAssertEqual((match.sets.firstObject as? MatchSet)?.games.count, 2)
+        h.service.undoLastPoint()
+        XCTAssertEqual(h.service.matchState?.decidingPointRule, .star)
+        h.service.pointWonByTeam1()
+        XCTAssertEqual(((match.sets.firstObject as? MatchSet)?.games.firstObject as? Game)?.winner, match.teams.firstObject as? Team)
+    }
+
+    @MainActor func testStarPointCanEndOnAdvantageBeforeThirdDeuce() throws {
+        let h = try Harness(), match = try h.create(deuce: .star)
+        for _ in 0..<3 { h.service.pointWonByTeam1(); h.service.pointWonByTeam2() }
+        h.service.pointWonByTeam1()
+        XCTAssertEqual(h.service.matchState?.team1.points, "AD")
+        h.service.pointWonByTeam1()
+        XCTAssertEqual((match.sets.firstObject as? MatchSet)?.games.count, 2)
+    }
+
+    @MainActor func testAdvantageHasNoDeuceLimit() throws {
+        let h = try Harness(), match = try h.create(deuce: .advantage)
+        for _ in 0..<10 { h.service.pointWonByTeam1(); h.service.pointWonByTeam2() }
+        XCTAssertFalse(h.service.matchState?.isGoldenPoint ?? true)
+        XCTAssertEqual((match.sets.firstObject as? MatchSet)?.games.count, 1)
+        h.service.pointWonByTeam1(); h.service.pointWonByTeam1()
+        XCTAssertEqual((match.sets.firstObject as? MatchSet)?.games.count, 2)
+    }
+
+    @MainActor func testSuperTieBreakStartsAtOneAllAndEndsWithTwoPointLead() throws {
+        let h = try Harness(), match = try h.create(bestOf: 3, doubles: true, superTieBreak: true)
+        try h.winSet(match, team: 0)
+        XCTAssertFalse((match.sets.lastObject as! MatchSet).isSuperTieBreak)
+        try h.winSet(match, team: 1)
+        h.service.match = match
+        let finalSet = match.sets.lastObject as! MatchSet
+        XCTAssertTrue(finalSet.isSuperTieBreak)
+        XCTAssertEqual(finalSet.games.count, 1)
+        XCTAssertTrue(h.service.matchState?.isSuperTieBreak == true)
+        // Starts with the next player in the fixed service order after 12 games.
+        XCTAssertEqual(try h.repository.servingPlayer(in: match).id, MatchPlayer.playerOne.id)
+        for _ in 0..<9 { h.service.pointWonByTeam1(); h.service.pointWonByTeam2() }
+        XCTAssertNil(match.winner)
+        h.service.pointWonByTeam1() // 10:9 is not a winning margin.
+        XCTAssertNil(match.winner)
+        h.service.pointWonByTeam1()
+        XCTAssertEqual(match.winner, match.teams.firstObject as? Team)
+        XCTAssertEqual(h.service.matchState?.team1.setScore.last?.value, "11")
+        XCTAssertEqual(h.service.matchState?.team2.setScore.last?.value, "9")
+        let history = ScoreHistoryViewModel(matchService: h.service)
+        XCTAssertEqual(history.sections.last?.games.last?.finalScore?.0.value, "11")
+        XCTAssertEqual(history.sections.last?.games.last?.finalScore?.1.value, "9")
+        h.service.undoLastPoint()
+        XCTAssertNil(match.winner)
+        XCTAssertEqual(h.service.matchState?.team1.points, "10")
+        XCTAssertTrue(finalSet.isSuperTieBreak)
+        h.service.pointWonByTeam1()
+        XCTAssertNotNil(match.winner)
+        let replay = try h.repository.replayMatch(match)
+        XCTAssertEqual(h.repository.rules(for: replay), h.repository.rules(for: match))
+        XCTAssertFalse((replay.sets.firstObject as! MatchSet).isSuperTieBreak)
+    }
+
+    @MainActor func testSuperTieBreakCanWinTenZeroAndBoundaryUndoRecreatesIt() throws {
+        let h = try Harness(), match = try h.create(bestOf: 3, superTieBreak: true)
+        try h.winSet(match, team: 0); try h.winSet(match, team: 1)
+        try h.repository.deleteLastPoint(in: match)
+        XCTAssertEqual(match.sets.count, 2)
+        try h.repository.awardPoint(in: match, to: 1)
+        XCTAssertTrue((match.sets.lastObject as! MatchSet).isSuperTieBreak)
+        for _ in 0..<7 { try h.repository.awardPoint(in: match, to: 0) }
+        XCTAssertNil(match.winner)
+        for _ in 0..<3 { try h.repository.awardPoint(in: match, to: 0) }
+        XCTAssertNotNil(match.winner)
+    }
+
+    @MainActor func testSuperTieBreakAtTwoAllButNotStraightSetsOrSingleSet() throws {
+        let h = try Harness(), match = try h.create(bestOf: 5, superTieBreak: true)
+        try h.winSet(match, team: 0); try h.winSet(match, team: 1)
+        XCTAssertFalse((match.sets.lastObject as! MatchSet).isSuperTieBreak)
+        try h.winSet(match, team: 0); try h.winSet(match, team: 1)
+        XCTAssertTrue((match.sets.lastObject as! MatchSet).isSuperTieBreak)
+        let straight = try h.create(bestOf: 3, superTieBreak: true)
+        try h.winSet(straight, team: 0); try h.winSet(straight, team: 0)
+        XCTAssertNotNil(straight.winner)
+        XCTAssertEqual(straight.sets.count, 2)
+        let single = try h.create(bestOf: 1, superTieBreak: true)
+        XCTAssertFalse((single.sets.firstObject as! MatchSet).isSuperTieBreak)
+        try h.winSet(single, team: 0)
+        XCTAssertNotNil(single.winner)
+    }
+
+    @MainActor func testWatchCreationCarriesAllFourRulesAndRejectsBadConfiguration() throws {
+        let h = try Harness()
+        var message = h.command(.createMatch)
+        let config = MatchConfiguration(format: .doubles, sets: 5, superTieBreak: true, deuceRule: .star)
+        message["configuration"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(config))
+        XCTAssertNil(h.receive(message)["error"])
+        let match = try XCTUnwrap(h.service.match)
+        XCTAssertEqual((match.teams.firstObject as? Team)?.players.count, 2)
+        XCTAssertEqual(h.repository.rules(for: match), MatchRules(bestOf: 5, deuceRule: .star, superTieBreak: true))
+        h.service.closeMatch()
+        var bad = h.command(.createMatch)
+        bad["configuration"] = ["format": "doubles", "sets": 7, "superTieBreak": true, "deuceRule": "star"]
+        XCTAssertNotNil(h.receive(bad)["error"])
+        XCTAssertNil(h.service.match)
+    }
+
+    @MainActor func testMigrationV1AndV2PreservesPlayableLegacyDeuceRules() throws {
+        for version in ["GameSetMatch", "GameSetMatchV2"] {
+            for golden in [false, true] {
+                try verifyLegacyMigration(version: version, golden: golden)
+            }
+        }
+    }
+
+    @MainActor private func verifyLegacyMigration(version: String, golden: Bool) throws {
+        let directory = try XCTUnwrap(Bundle(for: Match.self).url(forResource: "GameSetMatch", withExtension: "momd"))
+        let oldModel = try XCTUnwrap(NSManagedObjectModel(contentsOf: directory.appendingPathComponent("\(version).mom")))
+        let newModel = try XCTUnwrap(NSManagedObjectModel(contentsOf: directory))
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let url = temp.appendingPathComponent("old.sqlite")
+        let oldCoordinator = NSPersistentStoreCoordinator(managedObjectModel: oldModel)
+        let oldStore = try oldCoordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: url)
+        let oldContext = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        oldContext.persistentStoreCoordinator = oldCoordinator
+        let match = NSEntityDescription.insertNewObject(forEntityName: "Match", into: oldContext) as! Match
+        match.id = "legacy"
+        match.createdAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let rule = NSEntityDescription.insertNewObject(forEntityName: "Rule", into: oldContext) as! Rule
+        rule.name = "Старые правила"
+        rule.playMode = MatchType.custom.rawValue
+        rule.duration = 7
+        rule.tieBreak = SetTieBreak.firstToSix.rawValue
+        rule.gameTieBreak = (golden ? GameTieBreak.goldenRule : .fullTieBreak).rawValue
+        match.rule = rule
+        for index in 0..<2 {
+            let team = NSEntityDescription.insertNewObject(forEntityName: "Team", into: oldContext) as! Team
+            team.id = UUID()
+            let player = NSEntityDescription.insertNewObject(forEntityName: "Player", into: oldContext) as! Player
+            player.id = UUID(); player.name = "Player \(index)"; player.shortName = "P\(index)"
+            team.addToPlayers(player); match.addToTeams(team)
+        }
+        let set = NSEntityDescription.insertNewObject(forEntityName: "MatchSet", into: oldContext) as! MatchSet
+        let game = NSEntityDescription.insertNewObject(forEntityName: "Game", into: oldContext) as! Game
+        match.addToSets(set); set.addToGames(game)
+        for index in 0..<6 {
+            let point = NSEntityDescription.insertNewObject(forEntityName: "GamePoint", into: oldContext) as! GamePoint
+            point.winner = match.teams[index % 2] as! Team
+            point.servedBy = (match.teams[0] as! Team).players[0] as! Player
+            point.previousPoint = game.points.lastObject as? GamePoint
+            game.addToPoints(point)
+        }
+        try oldContext.save(); oldContext.reset(); try oldCoordinator.remove(oldStore)
+        let coordinator = NSPersistentStoreCoordinator(managedObjectModel: newModel)
+        let store = try coordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: url,
+            options: [NSMigratePersistentStoresAutomaticallyOption: true, NSInferMappingModelAutomaticallyOption: true])
+        let context = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        context.persistentStoreCoordinator = coordinator
+        let repository = CoreDataManager(context: context)
+        let restored = try XCTUnwrap(repository.match(byId: "legacy"))
+        XCTAssertEqual(restored.createdAt, Date(timeIntervalSince1970: 1_700_000_000))
+        XCTAssertEqual(try context.count(for: GamePoint.fetchRequest()), 6)
+        XCTAssertNil(restored.rule.deuceRuleCode)
+        XCTAssertNil(restored.rule.formatCode)
+        XCTAssertFalse(restored.rule.superTieBreak)
+        XCTAssertFalse((restored.sets.firstObject as! MatchSet).isSuperTieBreak)
+        let expected = MatchRules(bestOf: 7, deuceRule: golden ? .golden : .advantage, tieBreak: false)
+        XCTAssertEqual(repository.rules(for: restored), expected)
+        try repository.awardPoint(in: restored, to: 0)
+        XCTAssertEqual((restored.sets.firstObject as! MatchSet).games.count, golden ? 2 : 1)
+        let replay = try repository.replayMatch(restored)
+        XCTAssertEqual(repository.rules(for: replay), expected)
+        XCTAssertEqual(replay.rule.duration, 7)
+        XCTAssertNil(replay.rule.formatCode)
+        context.reset(); try coordinator.remove(store)
+    }
+
 }

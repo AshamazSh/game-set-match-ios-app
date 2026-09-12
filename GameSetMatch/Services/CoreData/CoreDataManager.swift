@@ -8,7 +8,7 @@ final class CoreDataManager: ObservableObject {
         var errorDescription: String? {
             switch self {
             case .invalidMatch: return String(localized: "The match data is incomplete.")
-            case .invalidRules: return String(localized: "Choose an odd number of sets between 1 and 9.")
+            case .invalidRules: return String(localized: "Choose 1, 3 or 5 sets.")
             }
         }
     }
@@ -49,8 +49,11 @@ final class CoreDataManager: ObservableObject {
     private func insertSet(in match: Match) -> MatchSet {
         let set = MatchSet(entity: NSEntityDescription.entity(forEntityName: "MatchSet", in: context)!, insertInto: context)
         set.previousSet = match.sets.lastObject as? MatchSet
+        let teams = match.teams.allObjectsOfType(Team.self)
+        let wonSets = score(match.sets.allObjectsOfType(MatchSet.self).map(\.winner), teams: teams)
+        set.isSuperTieBreak = MatchEngine.shouldPlaySuperTieBreak(sets: wonSets, rules: rules(for: match))
         match.addToSets(set)
-        insertGame(in: set)
+        insertGame(in: set, isTieBreak: set.isSuperTieBreak)
         return set
     }
 
@@ -63,16 +66,26 @@ final class CoreDataManager: ObservableObject {
         return game
     }
 
-    func createMatch(_ type: MatchType, customRule: CustomRule? = nil,
+    func createMatch(configuration: MatchConfiguration,
+                     players1: [MatchPlayer], players2: [MatchPlayer]) throws -> Match {
+        guard configuration.isValid else { throw RepositoryError.invalidRules }
+        guard players1.count == configuration.format.playerCount,
+              players2.count == configuration.format.playerCount else { throw RepositoryError.invalidMatch }
+        let rules = MatchRules(bestOf: configuration.sets, deuceRule: configuration.deuceRule,
+                               superTieBreak: configuration.superTieBreak)
+        return try createMatch(.custom, rules: rules, players1: players1, players2: players2, format: configuration.format)
+    }
+
+    /// Compatibility for creation requests from older Watch versions.
+    func createMatch(_ type: MatchType,
                      players1: [MatchPlayer] = [.playerOne, .playerOneB],
                      players2: [MatchPlayer] = [.playerTwo, .playerTwoB]) throws -> Match {
-        let rules = customRule.map { MatchRules(bestOf: $0.duration, goldenPoint: $0.goldenRule, tieBreak: $0.tieBreak) }
-            ?? MatchRules(goldenPoint: type == .padel)
+        let rules = MatchRules(bestOf: 1, deuceRule: type == .padel ? .golden : .advantage)
         return try createMatch(type, rules: rules, players1: players1, players2: players2)
     }
 
     private func createMatch(_ type: MatchType, rules: MatchRules,
-                             players1: [MatchPlayer], players2: [MatchPlayer], allowLegacyRules: Bool = false) throws -> Match {
+                             players1: [MatchPlayer], players2: [MatchPlayer], format: MatchFormat? = nil, allowLegacyRules: Bool = false) throws -> Match {
         guard rules.isValid || allowLegacyRules else { throw RepositoryError.invalidRules }
         guard (1...2).contains(players1.count), players1.count == players2.count else { throw RepositoryError.invalidMatch }
         return try transaction {
@@ -85,7 +98,10 @@ final class CoreDataManager: ObservableObject {
             rule.duration = rules.bestOf
             rule.playMode = type.rawValue
             rule.name = String(type.rawValue) // Persistent identity never depends on a translation.
-            rule.gameTieBreak = (rules.goldenPoint ? GameTieBreak.goldenRule : .fullTieBreak).rawValue
+            rule.formatCode = format?.rawValue
+            rule.deuceRuleCode = rules.deuceRule.rawValue
+            rule.superTieBreak = rules.superTieBreak
+            rule.gameTieBreak = (rules.deuceRule == .golden ? GameTieBreak.goldenRule : .fullTieBreak).rawValue
             rule.tieBreak = (rules.tieBreak ? SetTieBreak.fullTieBreak : .firstToSix).rawValue
             match.rule = rule
             _ = insertSet(in: match)
@@ -102,7 +118,9 @@ final class CoreDataManager: ObservableObject {
 
     func rules(for match: Match) -> MatchRules {
         MatchRules(bestOf: match.rule.duration,
-                   goldenPoint: match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue,
+                   deuceRule: DeuceRule(rawValue: match.rule.deuceRuleCode ?? "")
+                    ?? (match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue ? .golden : .advantage),
+                   superTieBreak: match.rule.superTieBreak,
                    tieBreak: match.rule.tieBreak == SetTieBreak.fullTieBreak.rawValue)
     }
 
@@ -135,7 +153,7 @@ final class CoreDataManager: ObservableObject {
             points: score(game.points.allObjectsOfType(GamePoint.self).map(\.winner), teams: teams),
             games: score(set.games.allObjectsOfType(Game.self).map(\.winner), teams: teams),
             sets: score(match.sets.allObjectsOfType(MatchSet.self).map(\.winner), teams: teams),
-            isTieBreak: game.isTieBreak, rules: rules(for: match))
+            isTieBreak: game.isTieBreak, rules: rules(for: match), tieBreakTarget: set.isSuperTieBreak ? 10 : 7)
         try transaction {
             let point = GamePoint(entity: NSEntityDescription.entity(forEntityName: "GamePoint", in: context)!, insertInto: context)
             point.servedBy = server
@@ -195,7 +213,8 @@ final class CoreDataManager: ObservableObject {
         guard teams.count == 2, let type = MatchType(rawValue: match.rule.playMode) else { throw RepositoryError.invalidMatch }
         return try createMatch(type, rules: rules(for: match),
             players1: teams[0].players.allObjectsOfType(Player.self).map(\.matchPlayer),
-            players2: teams[1].players.allObjectsOfType(Player.self).map(\.matchPlayer), allowLegacyRules: true)
+            players2: teams[1].players.allObjectsOfType(Player.self).map(\.matchPlayer),
+            format: match.rule.formatCode.flatMap(MatchFormat.init(rawValue:)), allowLegacyRules: true)
     }
 
     func deleteMatches(_ matches: [Match]) throws {

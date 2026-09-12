@@ -67,6 +67,12 @@ final class MatchService: ObservableObject {
                   command.revision == match?.revision else { throw CommandError.staleState }
         }
         switch command.action {
+        case .createMatch:
+            guard match == nil, let configuration = command.configuration else { throw CommandError.invalidRequest }
+            let count = configuration.format.playerCount
+            match = try coreDataManager.createMatch(configuration: configuration,
+                players1: Array([MatchPlayer.playerOne, .playerOneB].prefix(count)),
+                players2: Array([MatchPlayer.playerTwo, .playerTwoB].prefix(count)))
         case .createTennisMatch, .createTennis2x2Match, .createPadelMatch:
             guard match == nil else { throw CommandError.staleState }
             let type: MatchType = command.action == .createTennisMatch ? .tennis
@@ -131,7 +137,10 @@ final class MatchService: ObservableObject {
             state.matchID = match.id
             state.revision = match.revision
             for set in match.sets.allObjectsOfType(MatchSet.self) {
-                let score = coreDataManager.score(set.games.allObjectsOfType(Game.self).map(\.winner), teams: teams)
+                let winners: [Team?] = set.isSuperTieBreak
+                    ? set.games.allObjectsOfType(Game.self).flatMap { $0.points.allObjectsOfType(GamePoint.self) }.map(\.winner)
+                    : set.games.allObjectsOfType(Game.self).map(\.winner)
+                let score = coreDataManager.score(winners, teams: teams)
                 state.team1.setScore.append(.init(value: String(score.first), won: set.winner == teams[0]))
                 state.team2.setScore.append(.init(value: String(score.second), won: set.winner == teams[1]))
             }
@@ -139,8 +148,9 @@ final class MatchService: ObservableObject {
                 let points = coreDataManager.score(game.points.allObjectsOfType(GamePoint.self).map(\.winner), teams: teams)
                 (state.team1.points, state.team2.points) = MatchEngine.displayPoints(points, isTieBreak: game.isTieBreak)
                 state.isTieBreak = game.isTieBreak
-                state.isGoldenPoint = !game.isTieBreak && coreDataManager.rules(for: match).goldenPoint
-                    && points == MatchEngine.Score(first: 3, second: 3)
+                state.isSuperTieBreak = set.isSuperTieBreak
+                state.isGoldenPoint = !game.isTieBreak && MatchEngine.isDecidingPoint(points, rule: coreDataManager.rules(for: match).deuceRule)
+                state.decidingPointRule = state.isGoldenPoint ? coreDataManager.rules(for: match).deuceRule : nil
                 if match.winner == nil {
                     let server = try coreDataManager.servingPlayer(in: match)
                     if teams[0].players.contains(server) { state.team1.servingPlayer = server.matchPlayer }

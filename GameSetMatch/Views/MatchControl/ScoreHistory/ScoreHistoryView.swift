@@ -30,7 +30,7 @@ struct ScoreServingPlayer {
 
 enum ScoreRow {
     case regular(left: String, right: String, servingPlayer: ScoreServingPlayer?)
-    case goldenPoint
+    case decidingPoint(DeuceRule)
 }
 
 struct TeamScore {
@@ -47,7 +47,7 @@ struct SetScore: Identifiable {
 struct GameScoreSection: Identifiable {
     enum Title {
         case servingPlayer(ScoreServingPlayer?)
-        case tiebreak
+        case tiebreak(isSuper: Bool)
     }
     let id: Int
     let scores: [ScoreRow]
@@ -133,9 +133,9 @@ class ScoreHistoryViewModel: ObservableObject {
                     
                     let score = MatchEngine.Score(first: Int32(team1Points), second: Int32(team2Points))
                     let (left, right) = MatchEngine.displayPoints(score, isTieBreak: game.isTieBreak)
-                    if !game.isTieBreak && match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue
-                        && score == MatchEngine.Score(first: 3, second: 3) {
-                        scores.append(.goldenPoint)
+                    let deuceRule = matchService.coreDataManager.rules(for: match).deuceRule
+                    if !game.isTieBreak && MatchEngine.isDecidingPoint(score, rule: deuceRule) {
+                        scores.append(.decidingPoint(deuceRule))
                     } else {
                         scores.append(.regular(left: left, right: right, servingPlayer: game.isTieBreak ? pointServer : nil))
                     }
@@ -146,21 +146,21 @@ class ScoreHistoryViewModel: ObservableObject {
                     } else {
                         team2GamesWon += 1
                     }
-                    let team1TeamScore = TeamScore(value: "\(team1GamesWon)", hasWon: winner == teams[0])
-                    let team2TeamScore = TeamScore(value: "\(team2GamesWon)", hasWon: winner != teams[0])
+                    let team1TeamScore = TeamScore(value: String(aSet.isSuperTieBreak ? team1Points : team1GamesWon), hasWon: winner == teams[0])
+                    let team2TeamScore = TeamScore(value: String(aSet.isSuperTieBreak ? team2Points : team2GamesWon), hasWon: winner != teams[0])
                     if !scores.isEmpty { scores.removeLast() }
                     
                     gameSections.append(GameScoreSection(id: gameIndex,
                                                          scores: scores,
                                                          title: game.isTieBreak
-                                                         ? .tiebreak
+                                                         ? .tiebreak(isSuper: aSet.isSuperTieBreak)
                                                          : .servingPlayer(scoreServingPlayer),
                                                          finalScore: (team1TeamScore, team2TeamScore)))
                 } else {
                     gameSections.append(GameScoreSection(id: gameIndex,
                                                          scores: scores,
                                                          title: game.isTieBreak
-                                                         ? .tiebreak
+                                                         ? .tiebreak(isSuper: aSet.isSuperTieBreak)
                                                          : .servingPlayer(scoreServingPlayer),
                                                          finalScore: nil))
                 }
@@ -284,19 +284,22 @@ struct ScoreHistoryView: View {
                                                     }
                                                 }
                                             }
-                                        case .goldenPoint:
-                                            HStack {
-                                                Spacer()
-                                                Text("40")
-                                                    .frame(width: scoreWidth)
-                                                    .multilineTextAlignment(.center)
-                                                Text(":")
-                                                    .frame(width: separatorWidth)
-                                                    .multilineTextAlignment(.center)
-                                                Text("40")
-                                                    .frame(width: scoreWidth)
-                                                    .multilineTextAlignment(.center)
-                                                Spacer()
+                                        case .decidingPoint(let rule):
+                                            VStack {
+                                                Text(rule.title).font(.caption).foregroundStyle(.secondary)
+                                                HStack {
+                                                    Spacer()
+                                                    Text("40")
+                                                        .frame(width: scoreWidth)
+                                                        .multilineTextAlignment(.center)
+                                                    Text(":")
+                                                        .frame(width: separatorWidth)
+                                                        .multilineTextAlignment(.center)
+                                                    Text("40")
+                                                        .frame(width: scoreWidth)
+                                                        .multilineTextAlignment(.center)
+                                                    Spacer()
+                                                }
                                             }
                                         }
                                     }
@@ -325,10 +328,10 @@ struct ScoreHistoryView: View {
                                     }
                                 } header: {
                                     switch game.title {
-                                    case .tiebreak:
+                                    case .tiebreak(let isSuper):
                                         HStack {
                                             Spacer()
-                                            Text("TIEBREAK")
+                                            Text(isSuper ? String(localized: "Super tiebreak") : String(localized: "TIEBREAK"))
                                             Spacer()
                                         }
                                     case .servingPlayer(let servedPlayer):

@@ -35,10 +35,15 @@ struct MatchesHistoryView: View {
     }
     
     static func groupedMatches(_ matches: [Match]) -> [(String, [Match])] {
-        let groups = Dictionary(grouping: matches, by: { $0.rule.playMode })
+        // New configurations are grouped by format; legacy sport labels remain unchanged.
+        let groups = Dictionary(grouping: matches) { match in
+            match.rule.formatCode.map { "format.\($0)" } ?? "legacy.\(match.rule.playMode)"
+        }
         return groups.keys.sorted().compactMap { key in
-            guard let type = MatchType(rawValue: key), let matches = groups[key] else { return nil }
-            return (type.name, matches)
+            guard let matches = groups[key], let first = matches.first else { return nil }
+            let title = first.rule.formatCode.flatMap(MatchFormat.init(rawValue:))?.title
+                ?? MatchType(rawValue: first.rule.playMode)?.name
+            return title.map { ($0, matches) }
         }
     }
 

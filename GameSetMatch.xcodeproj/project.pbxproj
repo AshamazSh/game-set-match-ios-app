@@ -73,6 +73,7 @@
 		DC2ECE10535E0617B89305C2 /* libPods-GameSetMatchWatch Watch App.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 45F911C311B9793C5F8E21FD /* libPods-GameSetMatchWatch Watch App.a */; };
 		8F0F64F960E340A99068C081 /* CustomRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8FD3DC0978469FAA650281 /* CustomRule.swift */; };
 		F9923527F3594420BAF4B029 /* MatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82244A6AC51E4102BCDA5257 /* MatchEngine.swift */; };
+		0434DDB68DAF4A99A22BB651 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -229,6 +230,7 @@
 		DF8FD3DC0978469FAA650281 /* CustomRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameSetMatch/Services/Domain/CustomRule.swift"; sourceTree = SOURCE_ROOT; };
 		82244A6AC51E4102BCDA5257 /* MatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameSetMatch/Services/Domain/MatchEngine.swift"; sourceTree = SOURCE_ROOT; };
 		9366C0709F3947A196356714 /* GameSetMatchV2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV2.xcdatamodel; sourceTree = "<group>"; };
+		64200FB11A0F4ADBA35E0073 /* GameSetMatchV3.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV3.xcdatamodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -798,6 +800,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5E5626FD2B9B28C200676D36 /* Assets.xcassets in Resources */,
+				0434DDB68DAF4A99A22BB651 /* Localizable.xcstrings in Resources */,
 				5E5627002B9B28C200676D36 /* Preview Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1538,8 +1541,9 @@
 			children = (
 				5E48C4382B961A18003A44E8 /* GameSetMatch.xcdatamodel */,
 				9366C0709F3947A196356714 /* GameSetMatchV2.xcdatamodel */,
+				64200FB11A0F4ADBA35E0073 /* GameSetMatchV3.xcdatamodel */,
 			);
-			currentVersion = 9366C0709F3947A196356714 /* GameSetMatchV2.xcdatamodel */;
+			currentVersion = 64200FB11A0F4ADBA35E0073 /* GameSetMatchV3.xcdatamodel */;
 			path = GameSetMatch.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

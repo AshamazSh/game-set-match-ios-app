@@ -46,7 +46,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         Task { @MainActor [weak self] in self?.processMessage(applicationContext) }
     }
 
-    func sendRequest(_ request: AppRequest) {
+    func sendRequest(_ request: AppRequest, configuration: MatchConfiguration? = nil) {
         guard !isSendingRequest else { return }
         guard session.isCompanionAppInstalled, session.isReachable, session.activationState == .activated else {
             isConnected = false
@@ -54,6 +54,14 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
             return
         }
         var message: [String: Any] = ["request": request.rawValue, "requestID": UUID().uuidString]
+        if let configuration {
+            do {
+                message["configuration"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(configuration))
+            } catch {
+                errorMessage = error.localizedDescription
+                return
+            }
+        }
         message["matchID"] = matchState?.matchID
         message["revision"] = matchState?.revision
         isSendingRequest = true

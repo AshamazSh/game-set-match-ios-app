@@ -16,6 +16,9 @@ extension Rule {
         return NSFetchRequest<Rule>(entityName: "Rule")
     }
 
+    @NSManaged public var formatCode: String?
+    @NSManaged public var deuceRuleCode: String?
+    @NSManaged public var superTieBreak: Bool
     @NSManaged public var duration: Int32
     @NSManaged public var gameTieBreak: Int32
     @NSManaged public var name: String

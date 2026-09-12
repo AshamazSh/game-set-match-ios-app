@@ -43,6 +43,11 @@ struct MatchControlWatchView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             VStack {
+                if viewModel.matchState.isSuperTieBreak == true {
+                    Text("Super tiebreak").font(.caption)
+                } else if let rule = viewModel.matchState.decidingPointRule {
+                    Text(rule.title).font(.caption)
+                }
                 teamScore1
                 Divider()
                 teamScore2

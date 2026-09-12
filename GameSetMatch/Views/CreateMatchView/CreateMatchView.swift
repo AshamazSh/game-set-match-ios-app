@@ -47,20 +47,6 @@ class TeamInfo: ObservableObject {
         self.secondPlayer = secondPlayer
     }
     
-    func isValid(for type: MatchType, customRule: CustomRule) -> Bool {
-        switch type {
-        case .tennis, .tennis2x2, .padel:
-            return true
-        case .custom:
-            switch customRule.playMode {
-            case .single:
-                return isValid(for: .tennis, customRule: customRule)
-            case .double:
-                return isValid(for: .tennis2x2, customRule: customRule)
-            }
-        }
-    }
-    
     func players() -> [MatchPlayer] {
         return [firstPlayer, secondPlayer]
     }
@@ -87,64 +73,47 @@ struct CreateMatchView: View {
     @StateObject private var team2: TeamInfo
     @StateObject private var customRule: CustomRule = CustomRule()
     @State private var selectedPlayer: SelectedPlayer? = nil
-    private var isValid: Bool {
-        return team1.isValid(for: customRule.matchType, customRule: customRule) && team2.isValid(for: customRule.matchType, customRule: customRule)
-    }
-    
-    private var matchTypeDescription: some View {
-        VStack {
-            VStack {
-                LabeledContent("Best of sets:") {
-                    Stepper(String(customRule.duration)) {
-                        guard customRule.duration < 9 else { return }
-                        customRule.duration += 2
-                    } onDecrement: {
-                        guard customRule.duration > 1 else { return }
-                        customRule.duration -= 2
-                    }
+    private var matchSettings: some View {
+        Section {
+            Picker("Format", selection: $customRule.configuration.format) {
+                ForEach(MatchFormat.allCases) { format in
+                    Text(format.title).tag(format)
                 }
-                LabeledContent {
-                    Toggle(isOn: $customRule.tieBreak) {
-                        EmptyView()
-                    }
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text("Tiebreak")
-                        Text("Played on 6:6")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+            }
+            .accessibilityIdentifier("matchFormat")
+            Picker("Number of sets", selection: $customRule.configuration.sets) {
+                ForEach(MatchConfiguration.allowedSets, id: \.self) { sets in
+                    Text(String(sets)).tag(sets)
                 }
-                LabeledContent {
-                    Toggle(isOn: $customRule.goldenRule) {
-                        EmptyView()
-                    }
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text("Golden point")
-                        Text("Played on 40:40")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+            }
+            .accessibilityIdentifier("matchSets")
+            VStack(alignment: .leading, spacing: 6) {
+                Picker("Deciding set", selection: $customRule.configuration.superTieBreak) {
+                    Text("Normal set").tag(false)
+                    Text("Super tiebreak").tag(true)
                 }
-                if customRule.matchType == .custom {
-                    LabeledContent("Mode") {
-                        Picker(selection: $customRule.playMode, label: EmptyView()) {
-                            ForEach(CustomRule.PlayMode.allCases) { type in
-                                Text(type.title)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
+                .disabled(customRule.configuration.sets == 1)
+                .accessibilityIdentifier("decidingSet")
+                Text(customRule.configuration.sets == 1
+                     ? String(localized: "With one set, play a normal set with a tiebreak to 7 at 6:6.")
+                     : customRule.configuration.decidingSetExplanation)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Picker("At 40:40", selection: $customRule.configuration.deuceRule) {
+                    ForEach(DeuceRule.allCases) { rule in Text(rule.title).tag(rule) }
                 }
+                .accessibilityIdentifier("deuceRule")
+                Text(customRule.configuration.deuceRule.explanation)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }
-    
-    private var isSingleMatch: Bool {
-        customRule.matchType == .tennis || customRule.matchType == .custom && customRule.playMode == .single
-    }
-    
+
+    private var isSingleMatch: Bool { customRule.configuration.format == .singles }
+
     private func playerNameViewModel(for selectedPlayer: SelectedPlayer) -> PlayerNameViewModel {
         switch selectedPlayer {
         case .team1player1:
@@ -175,15 +144,7 @@ struct CreateMatchView: View {
         NavigationStack {
             VStack {
                 Form {
-                    LabeledContent("Rules") {
-                        Picker(selection: $customRule.matchType, label: EmptyView()) {
-                            ForEach(MatchType.allCases) { type in
-                                Text(type.name)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
-                    matchTypeDescription
+                    matchSettings
                     if isSingleMatch {
                         Section("Player 1") {
                             playerButton(for: .team1player1)
@@ -207,8 +168,7 @@ struct CreateMatchView: View {
                 Button {
                     matchService.perform {
                         matchService.match = try coreDataManager.createMatch(
-                            customRule.matchType,
-                            customRule: customRule.matchType == .custom ? customRule : nil,
+                            configuration: customRule.configuration,
                             players1: Array(team1.players().prefix(isSingleMatch ? 1 : 2)),
                             players2: Array(team2.players().prefix(isSingleMatch ? 1 : 2)))
                     }
@@ -216,12 +176,15 @@ struct CreateMatchView: View {
                     Text("Create")
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44, maxHeight: 44)
                 }
-                .disabled(!isValid)
+                .disabled(!customRule.configuration.isValid)
                 .buttonStyle(.borderedProminent)
                 .padding()
             }
             .background(Color(UIColor.systemGroupedBackground))
             .navigationTitle("Create new match")
+            .onChange(of: customRule.configuration.sets) { _, sets in
+                if sets == 1 { customRule.configuration.superTieBreak = false }
+            }
             .sheet(item: $selectedPlayer) { selectedPlayer in
                 switch selectedPlayer {
                 case .team1player2:
