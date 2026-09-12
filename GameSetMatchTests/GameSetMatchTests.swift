@@ -1,6 +1,5 @@
 import XCTest
 import CoreData
-import StoreKit
 @testable import GameSetMatch
 
 private final class TestContext: NSManagedObjectContext, @unchecked Sendable {
@@ -316,13 +315,7 @@ final class GameSetMatchTests: XCTestCase {
         XCTAssertTrue(h.service.matchState?.isGoldenPoint == true)
     }
 
-    @MainActor func testSubscriptionPolicyAndInvalidDurations() throws {
-        XCTAssertTrue(SubscriptionsService.grantsAccess(.subscribed))
-        XCTAssertTrue(SubscriptionsService.grantsAccess(.inGracePeriod))
-        for state in [Product.SubscriptionInfo.RenewalState.expired, .revoked, .inBillingRetryPeriod] {
-            XCTAssertFalse(SubscriptionsService.grantsAccess(state))
-        }
-        XCTAssertFalse(SubscriptionsService.hasSubscription(in: []))
+    @MainActor func testInvalidDurationsAreRejected() throws {
         let h = try Harness()
         XCTAssertThrowsError(try h.create(bestOf: 2))
         XCTAssertEqual(try h.context.count(for: Match.fetchRequest()), 0)

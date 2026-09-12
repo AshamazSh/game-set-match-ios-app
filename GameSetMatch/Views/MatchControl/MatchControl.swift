@@ -14,8 +14,6 @@ struct MatchControl: View {
         layout ?? .vertical
     }
     @State private var layout: LayoutDirection?
-    @EnvironmentObject private var subscriptions: SubscriptionsService
-    private var isSubscribed: Bool { subscriptions.hasSubscription }
     @State private var showMatchLog: Bool = false
     private var matchState: MatchState? {
         matchService.matchState
@@ -66,8 +64,7 @@ struct MatchControl: View {
                     ToolbarItem(placement: .topBarLeading) {
                         undoButton
                     }
-                    if match.winner != nil,
-                       isSubscribed {
+                    if match.winner != nil {
                         ToolbarItem(placement: .topBarLeading) {
                             Button("Play again") {
                                 matchService.perform { matchService.match = try coreDataManager.replayMatch(match) }

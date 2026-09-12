@@ -7,7 +7,6 @@ final class AppDependencies: ObservableObject {
     let repository: CoreDataManager
     let connectivity: ConnectivityManager
     let matchService: MatchService
-    let subscriptions = SubscriptionsService()
 
     init() {
         persistence = PersistenceController.shared
@@ -27,11 +26,6 @@ struct GameSetMatchApp: App {
             MainView(matchService: dependencies.matchService)
                 .environment(\.managedObjectContext, dependencies.persistence.container.viewContext)
                 .environmentObject(dependencies.repository)
-                .environmentObject(dependencies.subscriptions)
-                .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { state in
-                    dependencies.subscriptions.update(state.value ?? [])
-                }
-                .task { await dependencies.subscriptions.observeTransactions() }
         }
     }
 }

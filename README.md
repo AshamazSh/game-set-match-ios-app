@@ -1,6 +1,6 @@
 # Game, Set, Match
 
-SwiftUI scorekeeper for tennis and padel, with an Apple Watch remote.
+SwiftUI scorekeeper for tennis and padel, with an Apple Watch remote. All features are available without a subscription: custom rules, the complete match history and replaying finished matches.
 Open `GameSetMatch.xcworkspace` in Xcode. The project currently retains its CocoaPods integration (no third-party pods).
 
 ## Architecture
@@ -9,7 +9,6 @@ Open `GameSetMatch.xcworkspace` in Xcode. The project currently retains its Coco
 - `CoreDataManager`: main-actor repository. Creating, scoring, undoing and deleting are each a single transaction. A failed save rolls back the whole command.
 - `MatchService`: active match session. Restores the selected match, routes commands, publishes committed snapshots and reports errors.
 - `ConnectivityManager` / `WatchConnectivityManager`: request/reply transport and latest-state synchronization. Each modern command includes a request ID, match ID and expected persisted revision. Duplicate requests are ignored; stale commands return the current snapshot and an error. Background synchronization carries snapshots, never scoring commands.
-- `SubscriptionsService`: shared entitlement state, verified StoreKit transactions and subscription status. Only subscribed/grace-period states grant access.
 - `AppDependencies`: one retained instance of each service. View-owned form and history models use `StateObject`.
 
 ## Persistence and compatibility
@@ -39,4 +38,4 @@ xcodebuild -workspace GameSetMatch.xcworkspace -scheme 'GameSetMatchWatch Watch 
   -only-testing:'GameSetMatchWatch Watch AppTests' -parallel-testing-enabled NO test
 ```
 
-Choose simulator names installed on your machine. Tests use isolated stores and defaults. Coverage includes deuce/advantage, golden point, tiebreak service, best-of-five, undo, injected save failures, old-store migration, shared-rule deletion, command ordering/deduplication, history updates and stale Watch snapshots. Real-device connectivity and App Store billing flows still need device/sandbox testing before release.
+Choose simulator names installed on your machine. Tests use isolated stores and defaults. Coverage includes deuce/advantage, golden point, tiebreak service, best-of-five, undo, injected save failures, old-store migration, shared-rule deletion, command ordering/deduplication, history updates and stale Watch snapshots. Real-device connectivity still needs device testing before release.

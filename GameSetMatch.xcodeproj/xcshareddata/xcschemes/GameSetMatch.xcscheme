@@ -74,9 +74,6 @@
             ReferencedContainer = "container:GameSetMatch.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <StoreKitConfigurationFileReference
-         identifier = "../GameSetMatch/Resources/ProSubscription.storekit">
-      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

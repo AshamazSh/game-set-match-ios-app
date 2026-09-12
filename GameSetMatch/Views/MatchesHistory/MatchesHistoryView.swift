@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import StoreKit
 
 struct MatchesHistoryView: View {
     @Environment(\.managedObjectContext) private var context
@@ -45,9 +44,6 @@ struct MatchesHistoryView: View {
 
     private var sections: [(String, [Match])] { Self.groupedMatches(Array(matches)) }
 
-    @EnvironmentObject private var subscriptions: SubscriptionsService
-    private var isSubscribed: Bool { subscriptions.hasSubscription }
-    @State private var showSubscriptionView = false
     @State private var showResetContentConfirmation = false
     @State private var editMode = EditMode.inactive
     @Environment(\.colorScheme) var colorScheme: ColorScheme
@@ -55,26 +51,12 @@ struct MatchesHistoryView: View {
     var body: some View {
         NavigationStack {
             List {
-                if !isSubscribed,
-                   !matches.isEmpty {
-                    Button(action: {
-                        showSubscriptionView.toggle()
-                    }, label: {
-                        Text("Subscribe to Pro Features to see all matches history")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    })
-                    .listRowInsets(EdgeInsets())
-                    .padding(.top)
-                    .buttonStyle(.bordered)
-                    .listRowBackground(Color.clear)
-                    .deleteDisabled(true)
-                }
                 ForEach(sections, id: \.0) { pair in
                     Section(pair.0) {
-                        ForEach(Array(pair.1.enumerated()), id: \.element.objectID) { index, match in
+                        ForEach(pair.1, id: \.objectID) { match in
                             if match.teams.allObjectsOfType(Team.self).count > 1 {
                                 Button(action: {
-                                    if !editMode.isEditing && (isSubscribed || index == 0) {
+                                    if !editMode.isEditing {
                                         matchService.match = match
                                     }
                                 }, label: {
@@ -99,13 +81,7 @@ struct MatchesHistoryView: View {
                                         }
                                     }
                                 })
-                                .opacity(isSubscribed || index == 0 ? 1 : 0.6)
-                                .blur(radius: isSubscribed || index == 0 ? 0 : 4)
-                                .disabled(!isSubscribed && index != 0)
                                 .foregroundStyle(.primary)
-                                .if(!isSubscribed && index == 0) { view in
-                                    view.deleteDisabled(true)
-                                }
                             }
                         }
                         .onDelete { indexSet in
@@ -147,9 +123,6 @@ struct MatchesHistoryView: View {
                     secondaryButton: .cancel()
                 )
             }
-            .sheet(isPresented: $showSubscriptionView, content: {
-                SubscriptionView()
-            })
             .navigationTitle("History")
         }
     }

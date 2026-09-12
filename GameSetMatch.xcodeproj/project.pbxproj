@@ -65,10 +65,7 @@
 		5EA1461D2B9F7CE9004B5BF3 /* MatchesHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA1461C2B9F7CE9004B5BF3 /* MatchesHistoryView.swift */; };
 		5EA146202B9F9C13004B5BF3 /* TeamScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA1461F2B9F9C13004B5BF3 /* TeamScoreView.swift */; };
 		5EA146222B9F9C2F004B5BF3 /* TeamSetsScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA146212B9F9C2F004B5BF3 /* TeamSetsScoreView.swift */; };
-		5EA146242BA07FB5004B5BF3 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EA146232BA07FB5004B5BF3 /* StoreKit.framework */; };
 		5EA146CE2BA4FF59004B5BF3 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */; };
-		5EA146D22BA5B11C004B5BF3 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA146D12BA5B11C004B5BF3 /* SubscriptionView.swift */; };
-		5EA146D52BA60989004B5BF3 /* SubscriptionsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA146D42BA60989004B5BF3 /* SubscriptionsService.swift */; };
 		5EA146DD2BA87AC6004B5BF3 /* ViewConditionalModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA146DC2BA87AC6004B5BF3 /* ViewConditionalModifier.swift */; };
 		7A2B7AB621B751E45EEFA163 /* Pods_GameSetMatchTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 267258997C43986F011F3191 /* Pods_GameSetMatchTests.framework */; };
 		853F80F7F936471E617E08E2 /* Pods_GameSetMatch.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBCA23E367F47075F35D6593 /* Pods_GameSetMatch.framework */; };
@@ -219,11 +216,7 @@
 		5EA1461C2B9F7CE9004B5BF3 /* MatchesHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchesHistoryView.swift; sourceTree = "<group>"; };
 		5EA1461F2B9F9C13004B5BF3 /* TeamScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoreView.swift; sourceTree = "<group>"; };
 		5EA146212B9F9C2F004B5BF3 /* TeamSetsScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamSetsScoreView.swift; sourceTree = "<group>"; };
-		5EA146232BA07FB5004B5BF3 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
-		5EA146CF2BA5B003004B5BF3 /* ProSubscription.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ProSubscription.storekit; sourceTree = "<group>"; };
-		5EA146D12BA5B11C004B5BF3 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
-		5EA146D42BA60989004B5BF3 /* SubscriptionsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionsService.swift; sourceTree = "<group>"; };
 		5EA146DC2BA87AC6004B5BF3 /* ViewConditionalModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewConditionalModifier.swift; sourceTree = "<group>"; };
 		6E1B1DBC001F02D1AC31DDAB /* Pods-GameSetMatch-GameSetMatchUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatch-GameSetMatchUITests.release.xcconfig"; path = "Target Support Files/Pods-GameSetMatch-GameSetMatchUITests/Pods-GameSetMatch-GameSetMatchUITests.release.xcconfig"; sourceTree = "<group>"; };
 		776A92110C6A0218F7F706A8 /* Pods-GameSetMatchWatch Watch App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatchWatch Watch App.debug.xcconfig"; path = "Target Support Files/Pods-GameSetMatchWatch Watch App/Pods-GameSetMatchWatch Watch App.debug.xcconfig"; sourceTree = "<group>"; };
@@ -243,7 +236,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5EA146242BA07FB5004B5BF3 /* StoreKit.framework in Frameworks */,
 				5E5627252B9B29E300676D36 /* WatchConnectivity.framework in Frameworks */,
 				853F80F7F936471E617E08E2 /* Pods_GameSetMatch.framework in Frameworks */,
 			);
@@ -402,7 +394,6 @@
 				5E56273D2B9BC1C300676D36 /* ConnectivityManager */,
 				5E48C45F2B963191003A44E8 /* CoreData */,
 				5E48C4972B976B2C003A44E8 /* Domain */,
-				5EA146D32BA60968004B5BF3 /* SubscriptionsService */,
 				5E48C45D2B962C1E003A44E8 /* MatchService.swift */,
 			);
 			path = Services;
@@ -416,7 +407,6 @@
 				5E42827F2B9A3E3000455090 /* MainView */,
 				5E4282792B99E41B00455090 /* MatchControl */,
 				5EA1461B2B9F7CD9004B5BF3 /* MatchesHistory */,
-				5EA146D02BA5B10F004B5BF3 /* SubscriptionView */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -518,7 +508,6 @@
 				DBCA23E367F47075F35D6593 /* Pods_GameSetMatch.framework */,
 				BD58E090ED11067829685DBD /* Pods_GameSetMatch_GameSetMatchUITests.framework */,
 				267258997C43986F011F3191 /* Pods_GameSetMatchTests.framework */,
-				5EA146232BA07FB5004B5BF3 /* StoreKit.framework */,
 				5E5627262B9B29EA00676D36 /* WatchConnectivity.framework */,
 				5E5627242B9B29E300676D36 /* WatchConnectivity.framework */,
 				5EA145022B9CB883004B5BF3 /* WatchKit.framework */,
@@ -585,25 +574,8 @@
 				5E48C4302B961A18003A44E8 /* Assets.xcassets */,
 				5E5627302B9B5CDD00676D36 /* Info.plist */,
 				5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */,
-				5EA146CF2BA5B003004B5BF3 /* ProSubscription.storekit */,
 			);
 			path = Resources;
-			sourceTree = "<group>";
-		};
-		5EA146D02BA5B10F004B5BF3 /* SubscriptionView */ = {
-			isa = PBXGroup;
-			children = (
-				5EA146D12BA5B11C004B5BF3 /* SubscriptionView.swift */,
-			);
-			path = SubscriptionView;
-			sourceTree = "<group>";
-		};
-		5EA146D32BA60968004B5BF3 /* SubscriptionsService */ = {
-			isa = PBXGroup;
-			children = (
-				5EA146D42BA60989004B5BF3 /* SubscriptionsService.swift */,
-			);
-			path = SubscriptionsService;
 			sourceTree = "<group>";
 		};
 		FCE70B79DBBBA436BB4242B6 /* Pods */ = {
@@ -974,8 +946,6 @@
 				5E48C4812B9640AA003A44E8 /* Player+CoreDataProperties.swift in Sources */,
 				5E48C4822B9640AA003A44E8 /* Rule+CoreDataClass.swift in Sources */,
 				5E48C4832B9640AA003A44E8 /* Rule+CoreDataProperties.swift in Sources */,
-				5EA146D52BA60989004B5BF3 /* SubscriptionsService.swift in Sources */,
-				5EA146D22BA5B11C004B5BF3 /* SubscriptionView.swift in Sources */,
 				5E48C48E2B9640AA003A44E8 /* Team+CoreDataClass.swift in Sources */,
 				5E48C48F2B9640AA003A44E8 /* Team+CoreDataProperties.swift in Sources */,
 				5E59660B2BAB208400C6A30C /* CreatePlayerView.swift in Sources */,

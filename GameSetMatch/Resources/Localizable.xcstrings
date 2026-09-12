@@ -448,16 +448,6 @@
         }
       }
     },
-    "Pro Features" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pro Функционал"
-          }
-        }
-      }
-    },
     "Quit" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -507,26 +497,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Сокращенное имя"
-          }
-        }
-      }
-    },
-    "Subscribe to Pro Features to see all matches history" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Подписаться на Pro функционал для доступа к истории"
-          }
-        }
-      }
-    },
-    "Subscribe to Pro Features to set your own rules" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Подписаться на Pro функционал для настройки правил"
           }
         }
       }
@@ -613,16 +583,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Вернуть"
-          }
-        }
-      }
-    },
-    "Unlock advanced match customization and all matches history" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Получите доступ к настройкам матчей и полной истории"
           }
         }
       }

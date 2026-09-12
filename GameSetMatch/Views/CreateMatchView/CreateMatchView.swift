@@ -7,7 +7,6 @@
 
 import SwiftUI
 import CoreData
-import StoreKit
 import Combine
 
 @MainActor
@@ -87,14 +86,8 @@ struct CreateMatchView: View {
     @StateObject private var team1: TeamInfo
     @StateObject private var team2: TeamInfo
     @StateObject private var customRule: CustomRule = CustomRule()
-    @EnvironmentObject private var subscriptions: SubscriptionsService
-    private var isSubscribed: Bool { subscriptions.hasSubscription }
-    @State private var showSubscriptionView = false
     @State private var selectedPlayer: SelectedPlayer? = nil
     private var isValid: Bool {
-        if !isSubscribed && customRule.matchType == .custom {
-            return false
-        }
         return team1.isValid(for: customRule.matchType, customRule: customRule) && team2.isValid(for: customRule.matchType, customRule: customRule)
     }
     
@@ -144,17 +137,6 @@ struct CreateMatchView: View {
                         .pickerStyle(.menu)
                     }
                 }
-            }
-            .disabled(customRule.matchType == .custom && !isSubscribed)
-            .blur(radius: customRule.matchType == .custom && !isSubscribed ? 4 : 0)
-            
-            if customRule.matchType == .custom && !isSubscribed {
-                Button("Subscribe to Pro Features to set your own rules") {
-                    showSubscriptionView.toggle()
-                }
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity)
-                .padding(.bottom)
             }
         }
     }
@@ -240,9 +222,6 @@ struct CreateMatchView: View {
             }
             .background(Color(UIColor.systemGroupedBackground))
             .navigationTitle("Create new match")
-            .sheet(isPresented: $showSubscriptionView) {
-                SubscriptionView()
-            }
             .sheet(item: $selectedPlayer) { selectedPlayer in
                 switch selectedPlayer {
                 case .team1player2:
