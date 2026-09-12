@@ -21,7 +21,6 @@ struct MainView: View {
         ZStack {
             TabView(selection: $selectedTab) {
                 CreateMatchView(context: context)
-                    .environmentObject(CoreDataManager(context: context))
                     .environmentObject(matchService)
                     .tabItem {
                         Label("New match", systemImage: "figure.tennis")
@@ -38,12 +37,16 @@ struct MainView: View {
             .ignoresSafeArea()
             
             MatchControl(matchService: matchService)
-                .environmentObject(CoreDataManager(context: context))
                 .flipRotate(-180 + flipDegrees)
                 .opacity(showMatch ? 1.0 : 0.0)
                 .ignoresSafeArea()
         }
         .animation(.easeOut, value: showMatch)
+        .alert("Unable to complete action", isPresented: Binding(
+            get: { matchService.errorMessage != nil },
+            set: { if !$0 { matchService.errorMessage = nil } })) {
+                Button("OK") { matchService.errorMessage = nil }
+            } message: { Text(matchService.errorMessage ?? "") }
     }
 }
 

@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 
+@MainActor
 class MatchControlWatchViewModel: ObservableObject {
     let connectivityManager: WatchConnectivityManager
     let matchState: MatchState
@@ -75,7 +76,7 @@ struct MatchControlWatchView: View {
             
             VStack {
                 Spacer()
-                if !viewModel.matchState.isCompleted {
+                Group {
                     Button("Undo") {
                         viewModel.connectivityManager.sendRequest(.undo)
                         withAnimation {

@@ -1,24 +1,37 @@
-//
-//  GameSetMatchApp.swift
-//  GameSetMatch
-//
-//  Created by Ashamaz on 4/3/24.
-//
-
 import SwiftUI
 import CoreData
 
+@MainActor
+final class AppDependencies: ObservableObject {
+    let persistence: PersistenceController
+    let repository: CoreDataManager
+    let connectivity: ConnectivityManager
+    let matchService: MatchService
+    let subscriptions = SubscriptionsService()
+
+    init() {
+        persistence = PersistenceController.shared
+        repository = CoreDataManager(context: persistence.container.viewContext)
+        connectivity = ConnectivityManager()
+        matchService = MatchService(context: persistence.container.viewContext,
+                                    coreDataManager: repository, connectivityManager: connectivity)
+    }
+}
+
 @main
 struct GameSetMatchApp: App {
-    let persistenceController = PersistenceController.shared
-    let connectivityManager = ConnectivityManager()
-    
+    @StateObject private var dependencies = AppDependencies()
+
     var body: some Scene {
         WindowGroup {
-            MainView(matchService: MatchService(context: persistenceController.container.viewContext, 
-                                                coreDataManager: CoreDataManager(context: persistenceController.container.viewContext),
-                                                connectivityManager: ConnectivityManager()))
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
-   }
+            MainView(matchService: dependencies.matchService)
+                .environment(\.managedObjectContext, dependencies.persistence.container.viewContext)
+                .environmentObject(dependencies.repository)
+                .environmentObject(dependencies.subscriptions)
+                .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { state in
+                    dependencies.subscriptions.update(state.value ?? [])
+                }
+                .task { await dependencies.subscriptions.observeTransactions() }
+        }
     }
 }

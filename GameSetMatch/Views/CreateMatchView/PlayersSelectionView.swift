@@ -48,7 +48,7 @@ struct PlayersSelectionView: View {
                 Section {
                     ForEach(filteredPlayers) { player in
                         Button {
-                            selectedPlayer = MatchPlayer(name: player.name, shortName: player.shortName)
+                            selectedPlayer = player.matchPlayer
                             dismiss()
                         } label: {
                             PlayerNameView(viewModel: PlayerNameViewModel(player: player))
@@ -62,7 +62,6 @@ struct PlayersSelectionView: View {
             .interactiveDismissDisabled(true)
             .navigationDestination(isPresented: $showCreateNewPlayer) {
                 CreatePlayerView(newPlayer: $createdPlayer)
-                    .environmentObject(CoreDataManager(context: context))
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

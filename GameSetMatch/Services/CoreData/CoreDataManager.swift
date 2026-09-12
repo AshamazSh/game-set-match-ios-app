@@ -1,380 +1,216 @@
-//
-//  CoreDataManager.swift
-//  GameSetMatch
-//
-//  Created by Ashamaz on 5/3/24.
-//
-
 import CoreData
 
-class CoreDataManager: ObservableObject {
-    enum CoreDataManagerError: Error, LocalizedError {
-        case unknownError
-        case saveFailed
-        case deleteFailed
-        case fetchFailed
-        case objectCreationFailed
-        
+/// Repository for match commands. Each public mutation has a single commit.
+@MainActor
+final class CoreDataManager: ObservableObject {
+    enum RepositoryError: LocalizedError {
+        case invalidMatch, invalidRules
         var errorDescription: String? {
             switch self {
-            case .unknownError:
-                return "Some error occured. Please try again later."
-            case .fetchFailed:
-                return "Can not fetch objects."
-            case .objectCreationFailed:
-                return "Can not create object."
-            case .saveFailed:
-                return "Saving failed."
-            case .deleteFailed:
-                return "Deleting failed."
+            case .invalidMatch: return String(localized: "The match data is incomplete.")
+            case .invalidRules: return String(localized: "Choose an odd number of sets between 1 and 9.")
             }
         }
     }
-    
-    private let context: NSManagedObjectContext
-    private var tennisRule: Rule!
-    private var tennis2x2Rule: Rule!
-    private var padelRule: Rule!
-    
-    init(context: NSManagedObjectContext) {
-        self.context = context
-        fetchOrCreateRules()
-    }
-    
-    private func createTennisRule() {
-        guard let rule = NSEntityDescription.insertNewObject(forEntityName: Rule.entity().name!, into: context) as? Rule else {
-            fatalError("Can't create default rule")
-        }
-        let matchType = MatchType.tennis
-        rule.duration = 1
-        rule.playMode = matchType.rawValue
-        rule.gameTieBreak = GameTieBreak.fullTieBreak.rawValue
-        rule.tieBreak = SetTieBreak.fullTieBreak.rawValue
-        rule.name = matchType.name
+
+    let context: NSManagedObjectContext
+    init(context: NSManagedObjectContext) { self.context = context }
+
+    private func transaction<T>(_ operation: () throws -> T) throws -> T {
         do {
-            try save()
+            let result = try operation()
+            if context.hasChanges { try context.save() }
+            return result
         } catch {
-            fatalError("Can't create default rule")
-        }
-        tennisRule = rule
-    }
-    
-    private func createTennis2x2Rule() {
-        guard let rule = NSEntityDescription.insertNewObject(forEntityName: Rule.entity().name!, into: context) as? Rule else {
-            fatalError("Can't create default rule")
-        }
-        let matchType = MatchType.tennis2x2
-        rule.duration = 1
-        rule.playMode = matchType.rawValue
-        rule.gameTieBreak = GameTieBreak.fullTieBreak.rawValue
-        rule.tieBreak = SetTieBreak.fullTieBreak.rawValue
-        rule.name = matchType.name
-        do {
-            try save()
-        } catch {
-            fatalError("Can't create default rule")
-        }
-        tennis2x2Rule = rule
-    }
-    
-    private func createPadelRule() {
-        guard let rule = NSEntityDescription.insertNewObject(forEntityName: Rule.entity().name!, into: context) as? Rule else {
-            fatalError("Can't create default rule")
-        }
-        let matchType = MatchType.padel
-        rule.duration = 1
-        rule.playMode = matchType.rawValue
-        rule.gameTieBreak = GameTieBreak.goldenRule.rawValue
-        rule.tieBreak = SetTieBreak.fullTieBreak.rawValue
-        rule.name = matchType.name
-        do {
-            try save()
-        } catch {
-            fatalError("Can't create default rule")
-        }
-        padelRule = rule
-    }
-    
-    private func fetchOrCreateRules() {
-        let request = Rule.fetchRequest()
-        request.returnsObjectsAsFaults = false
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Rule.name, ascending: true)]
-        guard let fetchedRules = try? context.fetch(request) else {
-            createTennisRule()
-            createTennis2x2Rule()
-            createPadelRule()
-            return
-        }
-        var tennisRule: Rule?
-        var tennis2x2Rule: Rule?
-        var padelRule: Rule?
-        for rule in fetchedRules {
-            switch rule.name {
-            case MatchType.tennis.name:
-                tennisRule = rule
-            case MatchType.tennis2x2.name:
-                tennis2x2Rule = rule
-            case MatchType.padel.name:
-                padelRule = rule
-            default:
-                break
-            }
-        }
-        if tennisRule != nil {
-            self.tennisRule = tennisRule
-        } else {
-            createTennisRule()
-        }
-        if tennis2x2Rule != nil {
-            self.tennis2x2Rule = tennis2x2Rule
-        } else {
-            createTennis2x2Rule()
-        }
-        if padelRule != nil {
-            self.padelRule = padelRule
-        } else {
-            createPadelRule()
-        }
-    }
-    
-    func createPlayer(_ player: MatchPlayer, autosave: Bool = true) throws -> Player {
-        guard let playerObject = NSEntityDescription.insertNewObject(forEntityName: Player.entity().name!, into: context) as? Player else {
             context.rollback()
-            throw CoreDataManagerError.objectCreationFailed
+            throw error
         }
-        playerObject.id = player.id
-        playerObject.name = player.name
-        playerObject.shortName = player.shortName
-        if autosave {
-            try save()
-        }
-        
-        return playerObject
     }
-    
-    private func createPlayers(_ players: [MatchPlayer]) throws -> [Player] {
-        var result = [Player]()
-        for player in players {
-            result.append(try createPlayer(player, autosave: false))
-        }
-        return result
+
+    private func insertPlayer(_ player: MatchPlayer) -> Player {
+        let object = Player(entity: NSEntityDescription.entity(forEntityName: "Player", in: context)!, insertInto: context)
+        object.id = player.id
+        object.name = player.name
+        object.shortName = player.shortName
+        return object
     }
-    
-    private func createTeam(_ players: [MatchPlayer]) throws -> Team {
-        guard let team = NSEntityDescription.insertNewObject(forEntityName: Team.entity().name!, into: context) as? Team else {
-            context.rollback()
-            throw CoreDataManagerError.objectCreationFailed
-        }
-        
+
+    func createPlayer(_ player: MatchPlayer) throws -> Player {
+        try transaction { insertPlayer(player) }
+    }
+
+    private func insertTeam(_ players: [MatchPlayer]) -> Team {
+        let team = Team(entity: NSEntityDescription.entity(forEntityName: "Team", in: context)!, insertInto: context)
         team.id = UUID()
-        try createPlayers(players)
-            .forEach { player in
-                team.addToPlayers(player)
-            }
+        players.forEach { team.addToPlayers(insertPlayer($0)) }
         return team
     }
-    
-    private func ruleObject(for type: MatchType) -> Rule {
-        switch type {
-        case .tennis, .custom:
-            return tennisRule
-        case .tennis2x2:
-            return tennis2x2Rule
-        case .padel:
-            return padelRule
+
+    private func insertSet(in match: Match) -> MatchSet {
+        let set = MatchSet(entity: NSEntityDescription.entity(forEntityName: "MatchSet", in: context)!, insertInto: context)
+        set.previousSet = match.sets.lastObject as? MatchSet
+        match.addToSets(set)
+        insertGame(in: set)
+        return set
+    }
+
+    @discardableResult
+    private func insertGame(in set: MatchSet, isTieBreak: Bool = false) -> Game {
+        let game = Game(entity: NSEntityDescription.entity(forEntityName: "Game", in: context)!, insertInto: context)
+        game.previousGame = set.games.lastObject as? Game
+        game.isTieBreak = isTieBreak
+        set.addToGames(game)
+        return game
+    }
+
+    func createMatch(_ type: MatchType, customRule: CustomRule? = nil,
+                     players1: [MatchPlayer] = [.playerOne, .playerOneB],
+                     players2: [MatchPlayer] = [.playerTwo, .playerTwoB]) throws -> Match {
+        let rules = customRule.map { MatchRules(bestOf: $0.duration, goldenPoint: $0.goldenRule, tieBreak: $0.tieBreak) }
+            ?? MatchRules(goldenPoint: type == .padel)
+        return try createMatch(type, rules: rules, players1: players1, players2: players2)
+    }
+
+    private func createMatch(_ type: MatchType, rules: MatchRules,
+                             players1: [MatchPlayer], players2: [MatchPlayer], allowLegacyRules: Bool = false) throws -> Match {
+        guard rules.isValid || allowLegacyRules else { throw RepositoryError.invalidRules }
+        guard (1...2).contains(players1.count), players1.count == players2.count else { throw RepositoryError.invalidMatch }
+        return try transaction {
+            let match = Match(entity: NSEntityDescription.entity(forEntityName: "Match", in: context)!, insertInto: context)
+            match.id = UUID().uuidString
+            match.createdAt = Date()
+            match.addToTeams(insertTeam(players1))
+            match.addToTeams(insertTeam(players2))
+            let rule = Rule(entity: NSEntityDescription.entity(forEntityName: "Rule", in: context)!, insertInto: context)
+            rule.duration = rules.bestOf
+            rule.playMode = type.rawValue
+            rule.name = String(type.rawValue) // Persistent identity never depends on a translation.
+            rule.gameTieBreak = (rules.goldenPoint ? GameTieBreak.goldenRule : .fullTieBreak).rawValue
+            rule.tieBreak = (rules.tieBreak ? SetTieBreak.fullTieBreak : .firstToSix).rawValue
+            match.rule = rule
+            _ = insertSet(in: match)
+            return match
         }
     }
-    
-    private func customRuleObject(for customRule: CustomRule) throws -> Rule {
-        guard let rule = NSEntityDescription.insertNewObject(forEntityName: Rule.entity().name!, into: context) as? Rule else {
-            fatalError("Can't create default rule")
-        }
-        rule.duration = customRule.duration
-        rule.playMode = MatchType.custom.rawValue
-        rule.gameTieBreak = (customRule.goldenRule
-                             ? GameTieBreak.goldenRule
-                             : GameTieBreak.fullTieBreak)
-        .rawValue
-        rule.tieBreak = (customRule.tieBreak
-                         ? SetTieBreak.fullTieBreak
-                         : SetTieBreak.firstToSix).rawValue
-        rule.name = "Custom"
-        return rule
-    }
-    
-    private func createMatchSet(createFirstGame: Bool = true) throws -> MatchSet {
-        guard let newSet = NSEntityDescription.insertNewObject(forEntityName: MatchSet.entity().name!, into: context) as? MatchSet else {
-            throw CoreDataManagerError.objectCreationFailed
-        }
-        if createFirstGame {
-            newSet.addToGames(try createGame())
-        }
-        return newSet
-    }
-    
-    private func createGame() throws -> Game {
-        guard let newGame = NSEntityDescription.insertNewObject(forEntityName: Game.entity().name!, into: context) as? Game else {
-            throw CoreDataManagerError.objectCreationFailed
-        }
-        newGame.isTieBreak = false
-        return newGame
-    }
-    
-    // TODO: implement thread safety
-    func createMatch(
-        _ type: MatchType,
-        customRule: CustomRule? = nil,
-        players1: [MatchPlayer] = [.playerOne, .playerOneB],
-        players2: [MatchPlayer] = [.playerTwo, .playerTwoB]
-    ) throws -> Match {
-        guard let newMatch = NSEntityDescription.insertNewObject(forEntityName: Match.entity().name!, into: context) as? Match else {
-            throw CoreDataManagerError.objectCreationFailed
-        }
-        newMatch.id = UUID().uuidString
-        newMatch.createdAt = Date()
-        newMatch.addToTeams(try createTeam(players1))
-        newMatch.addToTeams(try createTeam(players2))
-        newMatch.addToSets(try createMatchSet())
-        if let customRule {
-            newMatch.rule = try customRuleObject(for: customRule)
-        } else {
-            newMatch.rule = ruleObject(for: type)
-        }
-        try save()
-        
-        return newMatch
-    }
-    
-    func match(byId id: String) -> Match? {
+
+    func match(byId id: String) throws -> Match? {
         let request = Match.fetchRequest()
         request.predicate = NSPredicate(format: "%K == %@", Match.kId, id)
-        return try? context.fetch(request).first
+        request.fetchLimit = 1
+        return try context.fetch(request).first
     }
-    
-    func addNewMatchSet(in match: Match) throws {
-        let newSet = try createMatchSet()
-        newSet.previousSet = match.sets.lastObject as? MatchSet
-        newSet.match = match
-        try save()
+
+    func rules(for match: Match) -> MatchRules {
+        MatchRules(bestOf: match.rule.duration,
+                   goldenPoint: match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue,
+                   tieBreak: match.rule.tieBreak == SetTieBreak.fullTieBreak.rawValue)
     }
-    
-    func addNewGame(in matchSet: MatchSet, isTieBreak: Bool = false) throws {
-        let newGame = try createGame()
-        newGame.previousGame = matchSet.games.lastObject as? Game
-        newGame.inverseMatchSet = matchSet
-        newGame.isTieBreak = isTieBreak
-        try save()
+
+    func score(_ winners: [Team?], teams: [Team]) -> MatchEngine.Score {
+        MatchEngine.Score(first: Int32(winners.filter { $0 == teams[0] }.count),
+                          second: Int32(winners.filter { $0 == teams[1] }.count))
     }
-    
-    func addNewPoint(in game: Game, servedBy: Player, wonBy: Team) throws {
-        guard let newPoint = NSEntityDescription.insertNewObject(forEntityName: GamePoint.entity().name!, into: context) as? GamePoint else {
-            throw CoreDataManagerError.objectCreationFailed
-        }
-        newPoint.servedBy = servedBy
-        newPoint.winner = wonBy
-        newPoint.previousPoint = game.points.lastObject as? GamePoint
-        newPoint.game = game
-        try save()
+
+    func servingPlayer(in match: Match) throws -> Player {
+        let teams = match.teams.allObjectsOfType(Team.self)
+        guard teams.count == 2 else { throw RepositoryError.invalidMatch }
+        let games = match.sets.allObjectsOfType(MatchSet.self).flatMap { $0.games.allObjectsOfType(Game.self) }
+        guard let current = games.last else { throw RepositoryError.invalidMatch }
+        let server = MatchEngine.servingPlayer(completedGames: games.dropLast().count,
+                                               tieBreakPoints: current.isTieBreak ? current.points.count : nil)
+        let player = server.team1ServingPlayer(players: teams[0].players.allObjectsOfType(Player.self))
+            ?? server.team2ServingPlayer(players: teams[1].players.allObjectsOfType(Player.self))
+        guard let player else { throw RepositoryError.invalidMatch }
+        return player
     }
-    
-    func deleteLastPoint(in match: Match) throws {
-        guard let lastSet = match.sets.lastObject as? MatchSet,
-              let lastGame = lastSet.games.lastObject as? Game else { return }
-        
-        if match.winner != nil {
-            match.winner?.finalScore -= 1
-            match.winner = nil
-            lastSet.winner = nil
-            lastGame.winner = nil
-            if let lastPoint = lastGame.points.lastObject as? GamePoint {
-                context.delete(lastPoint)
-            }
-        } else if lastGame.points.count == 0 {
-            if lastSet.games.count == 1 {
-                guard match.sets.count > 1 else { return }
-                lastSet.previousSet?.winner?.finalScore -= 1
-                lastSet.previousSet?.winner = nil
-                (lastSet.previousSet?.games.lastObject as? Game)?.winner = nil
-                context.delete(lastSet)
-                try save()
-                try deleteLastPoint(in: match)
-            } else {
-                lastGame.previousGame?.winner = nil
-                context.delete(lastGame)
-                try save()
-                try deleteLastPoint(in: match)
-            }
-        } else if let lastPoint = lastGame.points.lastObject as? GamePoint {
-            context.delete(lastPoint)
-        }
-        
-        try save()
-    }
-    
-    func matchOver(_ match: Match, withWinner team: Team) throws {
-        match.winner = team
-        try save()
-    }
-    
-    func replayMatch(_ match: Match) throws -> Match? {
-        guard let playMode = MatchType(rawValue: match.rule.playMode) else { return nil }
-        var team1 = [MatchPlayer]()
-        var team2 = [MatchPlayer]()
-        for (index, team) in match.teams.allObjectsOfType(Team.self).enumerated() {
-            for player in team.players.allObjectsOfType(Player.self) {
-                switch index {
-                case 0:
-                    team1.append(MatchPlayer(name: player.name, shortName: player.shortName))
-                case 1:
-                    team2.append(MatchPlayer(name: player.name, shortName: player.shortName))
-                default:
-                    break
+
+    func awardPoint(in match: Match, to teamIndex: Int) throws {
+        guard match.winner == nil else { return }
+        let teams = match.teams.allObjectsOfType(Team.self)
+        guard teams.count == 2, teams.indices.contains(teamIndex),
+              let set = match.sets.lastObject as? MatchSet,
+              let game = set.games.lastObject as? Game else { throw RepositoryError.invalidMatch }
+        let server = try servingPlayer(in: match)
+        let outcome = MatchEngine.pointOutcome(team: teamIndex,
+            points: score(game.points.allObjectsOfType(GamePoint.self).map(\.winner), teams: teams),
+            games: score(set.games.allObjectsOfType(Game.self).map(\.winner), teams: teams),
+            sets: score(match.sets.allObjectsOfType(MatchSet.self).map(\.winner), teams: teams),
+            isTieBreak: game.isTieBreak, rules: rules(for: match))
+        try transaction {
+            let point = GamePoint(entity: NSEntityDescription.entity(forEntityName: "GamePoint", in: context)!, insertInto: context)
+            point.servedBy = server
+            point.winner = teams[teamIndex]
+            point.previousPoint = game.points.lastObject as? GamePoint
+            game.addToPoints(point)
+            if outcome.gameWon {
+                game.winner = teams[teamIndex]
+                if outcome.setWon {
+                    set.winner = teams[teamIndex]
+                    if outcome.matchWon { match.winner = teams[teamIndex] }
+                    else { _ = insertSet(in: match) }
+                } else {
+                    insertGame(in: set, isTieBreak: outcome.nextGameIsTieBreak)
                 }
             }
-        }
-        
-        if playMode == .custom {
-            let customRule = CustomRule(duration: match.rule.duration,
-                                        goldenRule: match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue,
-                                        playMode: CustomRule.PlayMode.double,
-                                        tieBreak: match.rule.tieBreak == SetTieBreak.fullTieBreak.rawValue,
-                                        matchType: MatchType.custom)
-            return try createMatch(.custom, customRule: customRule, players1: team1, players2: team2)
-        } else {
-            return try createMatch(playMode, players1: team1, players2: team2)
+            updateFinalScores(match, teams: teams)
+            match.revision += 1
         }
     }
-    
-    func gameWon(_ game: Game, by team: Team) throws {
-        game.winner = team
-        try save()
-    }
-    
-    func setWon(_ matchSet: MatchSet, by team: Team) throws {
-        matchSet.winner = team
-        try save()
-    }
-    
-    func setFinalScore(_ score: Int32, team: Team) throws {
-        team.finalScore = score
-        try save()
-    }
-    
-    private func save(rollback: Bool = true) throws {
-        do {
-            try context.save()
-        } catch let error {
-            print(error.localizedDescription)
-            if rollback {
-                context.rollback()
+
+    func deleteLastPoint(in match: Match) throws {
+        let teams = match.teams.allObjectsOfType(Team.self)
+        guard teams.count == 2 else { throw RepositoryError.invalidMatch }
+        let sets = match.sets.allObjectsOfType(MatchSet.self)
+        // Locate the actual last event before changing the object graph.
+        guard let set = sets.last(where: { $0.games.allObjectsOfType(Game.self).contains { $0.points.count > 0 } }),
+              let game = set.games.allObjectsOfType(Game.self).last(where: { $0.points.count > 0 }),
+              let point = game.points.lastObject as? GamePoint else { return }
+        try transaction {
+            for trailingSet in sets.reversed().prefix(while: { $0 != set }) {
+                match.removeFromSets(trailingSet)
+                context.delete(trailingSet)
             }
-            throw CoreDataManagerError.saveFailed
+            for trailingGame in set.games.allObjectsOfType(Game.self).reversed().prefix(while: { $0 != game }) {
+                set.removeFromGames(trailingGame)
+                context.delete(trailingGame)
+            }
+            game.removeFromPoints(point)
+            context.delete(point)
+            game.winner = nil
+            set.winner = nil
+            match.winner = nil
+            updateFinalScores(match, teams: teams)
+            match.revision += 1
         }
     }
-    
-    func migrateMatchId(_ match: Match) {
+
+    private func updateFinalScores(_ match: Match, teams: [Team]) {
+        let result = score(match.sets.allObjectsOfType(MatchSet.self).map(\.winner), teams: teams)
+        teams[0].finalScore = result.first
+        teams[1].finalScore = result.second
+    }
+
+    func replayMatch(_ match: Match) throws -> Match {
+        let teams = match.teams.allObjectsOfType(Team.self)
+        guard teams.count == 2, let type = MatchType(rawValue: match.rule.playMode) else { throw RepositoryError.invalidMatch }
+        return try createMatch(type, rules: rules(for: match),
+            players1: teams[0].players.allObjectsOfType(Player.self).map(\.matchPlayer),
+            players2: teams[1].players.allObjectsOfType(Player.self).map(\.matchPlayer), allowLegacyRules: true)
+    }
+
+    func deleteMatches(_ matches: [Match]) throws {
+        try transaction {
+            let rules = Set(matches.map(\.rule))
+            matches.forEach(context.delete)
+            context.processPendingChanges()
+            for rule in rules where rule.matches.allObjects.compactMap({ $0 as? Match }).allSatisfy(\.isDeleted) {
+                context.delete(rule)
+            }
+        }
+    }
+
+    func migrateMatchId(_ match: Match) throws {
         guard match.id == nil else { return }
-        match.id = UUID().uuidString
-        try? save()
+        try transaction { match.id = UUID().uuidString }
     }
 }

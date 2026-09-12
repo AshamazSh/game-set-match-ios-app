@@ -23,6 +23,8 @@ struct MatchState: Codable {
         var isMatchWinner: Bool
     }
     
+    var matchID: String? = nil
+    var revision: Int64? = nil
     var team1: TeamInfo
     var team2: TeamInfo
     var isTieBreak: Bool

@@ -21,6 +21,7 @@ extension Match {
     @NSManaged public var sets: NSOrderedSet
     @NSManaged public var teams: NSOrderedSet
     @NSManaged public var winner: Team?
+    @NSManaged public var revision: Int64
     @NSManaged public var id: String?
     
     static let kId = "id"

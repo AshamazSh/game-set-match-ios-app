@@ -1,382 +1,162 @@
-//
-//  MatchService.swift
-//  GameSetMatch
-//
-//  Created by Ashamaz on 4/3/24.
-//
-
 import Combine
 import CoreData
 
 extension ServingPlayer {
     func team1ServingPlayer(players: [Player]) -> Player? {
+        guard let first = players.first else { return nil }
         switch self {
-        case .t1p1:
-            return players[0]
-        case .t2p1:
-            return nil
-        case .t1p2:
-            return players.count > 1 ? players[1] : players[0]
-        case .t2p2:
-            return nil
+        case .t1p1: return first
+        case .t1p2: return players.count > 1 ? players[1] : first
+        default: return nil
         }
     }
-    
     func team2ServingPlayer(players: [Player]) -> Player? {
+        guard let first = players.first else { return nil }
         switch self {
-        case .t1p1:
-            return nil
-        case .t2p1:
-            return players[0]
-        case .t1p2:
-            return nil
-        case .t2p2:
-            return players.count > 1 ? players[1] : players[0]
+        case .t2p1: return first
+        case .t2p2: return players.count > 1 ? players[1] : first
+        default: return nil
         }
     }
-    
 }
 
-class MatchService: NSObject, ObservableObject, NSFetchedResultsControllerDelegate {
-    @Published var matchState: MatchState? = nil {
-        didSet {
-            connectivityManager.sendState(matchState)
-        }
-    }
-    @Published var match: Match? {
-        didSet {
-            matchDidChange()
-        }
-    }
-    private var teams: [Team] {
-        match?.teams.allObjectsOfType(Team.self) ?? []
-    }
-    private var players: [UUID: [MatchPlayer]] {
-        var players = [UUID: [MatchPlayer]]()
-        for team in teams {
-            var current = [MatchPlayer]()
-            for player in team.players.allObjectsOfType(Player.self) {
-                current.append(MatchPlayer(id: player.id, name: player.name, shortName: player.shortName.uppercased()))
-            }
-            players[team.id] = current
-        }
-        
-        return players
-    }
-    private var teamNames: [String] {
-        var result = [String]()
-        for team in teams {
-            if let currentPlayers = players[team.id] {
-                result.append(currentPlayers.map { $0.shortName.uppercased() }.joined(separator: " / "))
-            }
-        }
-        return result
-    }
-    private let coreDataManager: CoreDataManager
-    private var pointsFetchedResultsController: NSFetchedResultsController<GamePoint>?
-    private let connectivityManager: ConnectivityManager
-    private var cancellables = Set<AnyCancellable>()
-    private let context: NSManagedObjectContext
+/// Owns the active match and publishes only committed snapshots.
+@MainActor
+final class MatchService: ObservableObject {
+    @Published private(set) var matchState: MatchState?
+    @Published var match: Match? { didSet { refresh() } }
+    @Published var errorMessage: String?
+    let coreDataManager: CoreDataManager
+    private let connectivityManager: MatchTransport
+    private let defaults: UserDefaults
     private let displayedMatchIdKey = "com.gamesetmatch.displayedMatchIdKey"
-    
-    init(context: NSManagedObjectContext, coreDataManager: CoreDataManager, connectivityManager: ConnectivityManager) {
+
+    init(context: NSManagedObjectContext, coreDataManager: CoreDataManager,
+         connectivityManager: MatchTransport, defaults: UserDefaults = .standard) {
         self.coreDataManager = coreDataManager
         self.connectivityManager = connectivityManager
-        self.context = context
-        super.init()
-        if let matchId = UserDefaults.standard.string(forKey: displayedMatchIdKey) {
-            match = coreDataManager.match(byId: matchId)
-        } else {
-            match = nil
+        self.defaults = defaults
+        connectivityManager.onCommand = { [weak self] command in
+            guard let self else { return }
+            do { try self.handle(command) }
+            catch {
+                self.errorMessage = error.localizedDescription
+                throw error
+            }
         }
-        subscribeToConnectivityManager()
-    }
-    
-    private func subscribeToConnectivityManager() {
-        connectivityManager
-            .objectWillChange
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                guard let self else { return }
-                defer {
-                    self.connectivityManager.sendState(self.matchState)
-                }
-                switch self.connectivityManager.requestedAction {
-                case .createTennisMatch:
-                    guard self.match == nil else { return }
-                    self.match = try? self.coreDataManager.createMatch(.tennis,
-                                                                       players1: [.playerOne],
-                                                                       players2: [.playerTwo])
-                case .createTennis2x2Match:
-                    guard self.match == nil else { return }
-                    self.match = try? self.coreDataManager.createMatch(.tennis2x2)
-                case .createPadelMatch:
-                    guard self.match == nil else { return }
-                    self.match = try? self.coreDataManager.createMatch(.padel)
-                case .undo:
-                    guard let matchState = self.matchState,
-                          !matchState.isCompleted else { return }
-                    self.undoLastPoint()
-                case .teamAScored:
-                    guard let matchState = self.matchState,
-                          !matchState.isCompleted else { return }
-                    self.pointWonByTeam1()
-                case .teamBScored:
-                    guard let matchState = self.matchState,
-                          !matchState.isCompleted else { return }
-                    self.pointWonByTeam2()
-                case .endMatch:
-                    guard self.matchState != nil else { return }
-                    self.matchState = nil
-                case .none, .newState, .resetMatch, .ignored, .currentStatus:
-                    break
-                }
+        do {
+            if let id = defaults.string(forKey: displayedMatchIdKey) {
+                match = try coreDataManager.match(byId: id)
             }
-            .store(in: &cancellables)
+            refresh()
+        } catch { errorMessage = error.localizedDescription }
     }
-    
-    private func matchDidChange() {
-        if let match {
-            if match.id == nil {
-                coreDataManager.migrateMatchId(match)
-            }
-            UserDefaults.standard.setValue(match.id, forKey: displayedMatchIdKey)
-            let fetchRequest = GamePoint.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "%K.%K.%K == %@", GamePoint.kGame, Game.kInverseMatchSet, MatchSet.kMatch, match)
-            fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \GamePoint.objectID, ascending: true)]
-            pointsFetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: self.context, sectionNameKeyPath: nil, cacheName: nil)
-            pointsFetchedResultsController?.delegate = self
-            try? pointsFetchedResultsController?.performFetch()
-            calculateCurrentSituation()
-        } else {
-            UserDefaults.standard.removeObject(forKey: displayedMatchIdKey)
-            pointsFetchedResultsController = nil
-            matchState = nil
+
+    func perform(_ operation: () throws -> Void) {
+        do { try operation() }
+        catch { errorMessage = error.localizedDescription }
+    }
+
+    func closeMatch() { match = nil }
+
+    private func handle(_ command: WatchCommand) throws {
+        // Modern commands target the exact state shown when the user tapped.
+        // This also rejects a duplicate after the phone process restarts.
+        if command.action != .currentStatus, command.requestID != nil {
+            guard command.matchID == match?.id,
+                  command.revision == match?.revision else { throw CommandError.staleState }
+        }
+        switch command.action {
+        case .createTennisMatch, .createTennis2x2Match, .createPadelMatch:
+            guard match == nil else { throw CommandError.staleState }
+            let type: MatchType = command.action == .createTennisMatch ? .tennis
+                : command.action == .createPadelMatch ? .padel : .tennis2x2
+            match = try coreDataManager.createMatch(type,
+                players1: type == .tennis ? [.playerOne] : [.playerOne, .playerOneB],
+                players2: type == .tennis ? [.playerTwo] : [.playerTwo, .playerTwoB])
+        case .teamAScored, .teamBScored:
+            guard let match, match.winner == nil else { throw CommandError.staleState }
+            try coreDataManager.awardPoint(in: match, to: command.action == .teamAScored ? 0 : 1)
+            refresh()
+        case .undo:
+            guard let match else { throw CommandError.staleState }
+            try coreDataManager.deleteLastPoint(in: match)
+            refresh()
+        case .endMatch: closeMatch()
+        case .currentStatus: break
+        default: throw CommandError.invalidRequest
         }
     }
-    
+
     func undoLastPoint() {
-        if let match {
-            try? coreDataManager.deleteLastPoint(in: match)
+        guard let match else { return }
+        perform { try coreDataManager.deleteLastPoint(in: match); refresh() }
+    }
+    func pointWonByTeam1() { awardPoint(to: 0) }
+    func pointWonByTeam2() { awardPoint(to: 1) }
+    private func awardPoint(to team: Int) {
+        guard let match else { return }
+        perform { try coreDataManager.awardPoint(in: match, to: team); refresh() }
+    }
+
+    func deleteMatches(_ matches: [Match]) {
+        perform {
+            let closesActive = match.map { matches.contains($0) } ?? false
+            try coreDataManager.deleteMatches(matches)
+            if closesActive { closeMatch() }
         }
     }
-    
-    private func matchCurrentScore(in match: Match) -> (Int32, Int32) {
-        var team1WonSets: Int32 = 0
-        var team2WonSets:Int32 = 0
-        for aSet in match.sets.allObjectsOfType(MatchSet.self) {
-            if let wonBy = aSet.winner {
-                switch teams.firstIndex(of: wonBy) {
-                case 0:
-                    team1WonSets += 1
-                case 1:
-                    team2WonSets += 1
-                default:
-                    break
-                }
-            }
-        }
-        
-        return (team1WonSets, team2WonSets)
-    }
-    
-    private func teamsSetScore(in matchSet: MatchSet) -> (Int32, Int32) {
-        var team1CurrentSetScore: Int32 = 0
-        var team2CurrentSetScore: Int32 = 0
-        for game in matchSet.games.allObjectsOfType(Game.self) {
-            if let wonBy = game.winner {
-                switch teams.firstIndex(of: wonBy) {
-                case 0:
-                    team1CurrentSetScore += 1
-                case 1:
-                    team2CurrentSetScore += 1
-                default:
-                    break
-                }
-            }
-        }
-        return (team1CurrentSetScore, team2CurrentSetScore)
-    }
-    
-    private func teamsGameScore(in game: Game) -> (Int32, Int32) {
-        var team1Score: Int32 = 0
-        var team2Score: Int32 = 0
-        for point in game.points.allObjectsOfType(GamePoint.self) {
-            switch teams.firstIndex(of: point.winner) {
-            case 0:
-                team1Score += 1
-            case 1:
-                team2Score += 1
-            default:
-                break
-            }
-        }
-        
-        return (team1Score, team2Score)
-    }
-    
-    private func calculateCurrentSituation() {
-        if let match {
-            var state = MatchState(team1: MatchState.TeamInfo(name: teamNames[0], setScore: [], points: "", players: players[teams[0].id]!, isMatchWinner: match.winner == teams[0]),
-                                   team2: MatchState.TeamInfo(name: teamNames[1], setScore: [], points: "", players: players[teams[1].id]!, isMatchWinner: match.winner == teams[1]),
-                                   isTieBreak: false,
-                                   isGoldenPoint: false,
-                                   isCompleted: match.winner != nil)
-            for matchSet in match.sets.allObjectsOfType(MatchSet.self) {
-                let (team1CurrentSetScore, team2CurrentSetScore) = teamsSetScore(in: matchSet)
-                state.team1.setScore.append(MatchState.TeamInfo.SetScore(value: String(team1CurrentSetScore), won: matchSet.winner == teams[0]))
-                state.team2.setScore.append(MatchState.TeamInfo.SetScore(value: String(team2CurrentSetScore), won: matchSet.winner == teams[1]))
-            }
-            
-            guard let lastSet = match.sets.lastObject as? MatchSet,
-                  let lastGame = lastSet.games.lastObject as? Game else {
-                self.matchState = state
-                return
-            }
-            
-            let (team1Score, team2Score) = teamsGameScore(in: lastGame)
-            var servedByIndex = match.sets.count - 1
-            servedByIndex += lastSet.games.count - 1
-            for (number, _) in lastGame.points.allObjectsOfType(GamePoint.self).enumerated() {
-                if lastGame.isTieBreak {
-                    if number == 0 {
-                        servedByIndex += 1
-                    } else if number%2 == 0 {
-                        servedByIndex += 1
-                    }
-                }
-            }
-            
-            if match.winner == nil {
-                if lastGame.isTieBreak {
-                    state.team1.points = String(team1Score)
-                    state.team2.points = String(team2Score)
-                    state.isGoldenPoint = false
-                    state.isTieBreak = true
-                } else {
-                    state.isGoldenPoint = match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue && team1Score == 3 && team2Score == 3
-                    if max(team1Score, team2Score) > 3 {
-                        if team1Score == team2Score {
-                            state.team1.points = "40"
-                            state.team2.points = "40"
-                        } else if team1Score > team2Score {
-                            state.team1.points = "AD"
-                            state.team2.points = "-"
-                        } else {
-                            state.team1.points = "-"
-                            state.team2.points = "AD"
-                        }
-                    } else {
-                        state.team1.points = pointsString(for: team1Score)
-                        state.team2.points = pointsString(for: team2Score)
-                    }
-                }
-                
-                servedByIndex = servedByIndex % ServingPlayer.allCases.count
-                let servingPlayer = ServingPlayer(rawValue: servedByIndex) ?? .t1p1
-                if let player = servingPlayer.team1ServingPlayer(players: teams[0].players.allObjectsOfType(Player.self)) {
-                    state.team1.servingPlayer = MatchPlayer(id: player.id, name: player.name, shortName: player.shortName.uppercased())
-                }
-                if let player = servingPlayer.team2ServingPlayer(players: teams[1].players.allObjectsOfType(Player.self)) {
-                    state.team2.servingPlayer = MatchPlayer(id: player.id, name: player.name, shortName: player.shortName.uppercased())
-                }
-            } else {
-                state.team1.points = match.winner == teams[0] ? "🏆" :  "-"
-                state.team2.points = match.winner == teams[1] ? "🏆" :  "-"
-            }
-            
-            matchState = state
-        }
-    }
-    
-    private func pointsString(for points: Int32) -> String {
-        switch points {
-        case 0:
-            return "0"
-        case 1:
-            return "15"
-        case 2:
-            return "30"
-        default:
-            return "40"
-        }
-    }
-    
-    func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
-        if controller == pointsFetchedResultsController {
-            calculateCurrentSituation()
-        }
-    }
-    
-    private func pointWon(byTeamIndex winnerTeamIndex: Int) {
-        guard let matchState,
-              let match,
-              match.winner == nil,
-              let lastSet = match.sets.lastObject as? MatchSet,
-              let lastGame = lastSet.games.lastObject as? Game else {
+
+    private func refresh() {
+        guard let match, !match.isDeleted else {
+            defaults.removeObject(forKey: displayedMatchIdKey)
+            matchState = nil
+            connectivityManager.sendState(nil)
             return
         }
-        let winnerTeam = teams[winnerTeamIndex]
-        
-        var (wonTeamScore, lostTeamScore) = teamsGameScore(in: lastGame)
-        if winnerTeamIndex == 1 {
-            swap(&wonTeamScore, &lostTeamScore)
-        }
-        wonTeamScore += 1
-        let gameIsOver = matchState.isGoldenPoint ||
-        (matchState.isTieBreak && wonTeamScore - lostTeamScore > 1 && wonTeamScore > 6) ||
-        (!matchState.isTieBreak && wonTeamScore - lostTeamScore > 1 && wonTeamScore > 3)
-        if gameIsOver {
-            var (wonTeamSetScore, lostTeamSetScore) = teamsSetScore(in: lastSet)
-            if winnerTeamIndex == 1 {
-                swap(&wonTeamSetScore, &lostTeamSetScore)
+        do {
+            try coreDataManager.migrateMatchId(match)
+            let teams = match.teams.allObjectsOfType(Team.self)
+            guard teams.count == 2, teams.allSatisfy({ $0.players.count > 0 }) else {
+                throw CoreDataManager.RepositoryError.invalidMatch
             }
-            wonTeamSetScore += 1
-            let setIsOver = matchState.isTieBreak || wonTeamSetScore > 5 &&
-            (wonTeamSetScore - lostTeamSetScore > 1 || match.rule.tieBreak == SetTieBreak.firstToSix.rawValue)
-            if setIsOver {
-                var (wonTeamTotalSets, lostTeamTotalSets) = matchCurrentScore(in: match)
-                if winnerTeamIndex == 1 {
-                    swap(&wonTeamTotalSets, &lostTeamTotalSets)
-                }
-                wonTeamTotalSets += 1
-                try? coreDataManager.setFinalScore(wonTeamTotalSets, team: teams[winnerTeamIndex])
-                try? coreDataManager.setFinalScore(lostTeamTotalSets, team: teams[winnerTeamIndex == 1 ? 0 : 1])
-                if wonTeamTotalSets > match.rule.duration - wonTeamTotalSets + lostTeamTotalSets ||
-                    match.rule.duration <= wonTeamTotalSets + lostTeamTotalSets {
-                    try? coreDataManager.matchOver(match, withWinner: winnerTeam)
-                } else {
-                    try? coreDataManager.addNewMatchSet(in: match)
-                }
-                try? coreDataManager.setWon(lastSet, by: winnerTeam)
-            } else {
-                let nextGameIsTieBreak = match.rule.tieBreak == SetTieBreak.fullTieBreak.rawValue && wonTeamSetScore == 6 && lostTeamSetScore == 6
-                
-                try? coreDataManager.addNewGame(in: lastSet, isTieBreak: nextGameIsTieBreak)
+            defaults.set(match.id, forKey: displayedMatchIdKey)
+            func info(_ team: Team) -> MatchState.TeamInfo {
+                let players = team.players.allObjectsOfType(Player.self).map(\.matchPlayer)
+                return MatchState.TeamInfo(name: players.map { $0.shortName.uppercased() }.joined(separator: " / "),
+                    setScore: [], points: "0", players: players, isMatchWinner: match.winner == team)
             }
-            try? coreDataManager.gameWon(lastGame, by: winnerTeam)
+            var state = MatchState(team1: info(teams[0]), team2: info(teams[1]),
+                isTieBreak: false, isGoldenPoint: false, isCompleted: match.winner != nil)
+            state.matchID = match.id
+            state.revision = match.revision
+            for set in match.sets.allObjectsOfType(MatchSet.self) {
+                let score = coreDataManager.score(set.games.allObjectsOfType(Game.self).map(\.winner), teams: teams)
+                state.team1.setScore.append(.init(value: String(score.first), won: set.winner == teams[0]))
+                state.team2.setScore.append(.init(value: String(score.second), won: set.winner == teams[1]))
+            }
+            if let set = match.sets.lastObject as? MatchSet, let game = set.games.lastObject as? Game {
+                let points = coreDataManager.score(game.points.allObjectsOfType(GamePoint.self).map(\.winner), teams: teams)
+                (state.team1.points, state.team2.points) = MatchEngine.displayPoints(points, isTieBreak: game.isTieBreak)
+                state.isTieBreak = game.isTieBreak
+                state.isGoldenPoint = !game.isTieBreak && coreDataManager.rules(for: match).goldenPoint
+                    && points == MatchEngine.Score(first: 3, second: 3)
+                if match.winner == nil {
+                    let server = try coreDataManager.servingPlayer(in: match)
+                    if teams[0].players.contains(server) { state.team1.servingPlayer = server.matchPlayer }
+                    else { state.team2.servingPlayer = server.matchPlayer }
+                }
+            }
+            if match.winner != nil {
+                state.team1.points = match.winner == teams[0] ? "🏆" : "-"
+                state.team2.points = match.winner == teams[1] ? "🏆" : "-"
+            }
+            matchState = state
+            connectivityManager.sendState(state)
+        } catch {
+            errorMessage = error.localizedDescription
+            matchState = nil
+            connectivityManager.sendState(nil)
         }
-        
-        try? coreDataManager.addNewPoint(in: lastGame, servedBy: currentServingPlayer(in: matchState), wonBy: winnerTeam)
-    }
-    
-    func pointWonByTeam1() {
-        pointWon(byTeamIndex: 0)
-    }
-    
-    func pointWonByTeam2() {
-        pointWon(byTeamIndex: 1)
-    }
-    
-    private func currentServingPlayer(in matchState: MatchState) -> Player {
-        if let servingPlayerId = matchState.team1.servingPlayer?.id {
-            return player(inTeam: teams[0], byId: servingPlayerId)
-        } else {
-            return player(inTeam: teams[1], byId: matchState.team2.servingPlayer?.id)
-        }
-    }
-    
-    private func player(inTeam team: Team, byId id: UUID?) -> Player {
-        return team.players.allObjectsOfType(Player.self).first { $0.id == id } ?? team.players.allObjectsOfType(Player.self)[0]
     }
 }

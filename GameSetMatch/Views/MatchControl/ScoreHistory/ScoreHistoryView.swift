@@ -55,6 +55,7 @@ struct GameScoreSection: Identifiable {
     let finalScore: (TeamScore, TeamScore)?
 }
 
+@MainActor
 class ScoreHistoryViewModel: ObservableObject {
     private var matchService: MatchService
     @Published var dismiss = false
@@ -64,15 +65,12 @@ class ScoreHistoryViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     init(matchService: MatchService) {
         self.matchService = matchService
-        if let match = matchService.match {
-            calculateSections(match)
-        }
+        subscribeToActiveMatch()
     }
     
     private func subscribeToActiveMatch() {
         matchService
-            .objectWillChange
-            .receive(on: DispatchQueue.main)
+            .$matchState
             .sink(receiveValue: { [weak self] _ in
                 guard let self else { return }
                 if let match = self.matchService.match {
@@ -82,19 +80,6 @@ class ScoreHistoryViewModel: ObservableObject {
                 }
             })
             .store(in: &cancellables)
-    }
-    
-    private func pointsString(for points: Int) -> String {
-        switch points {
-        case 0:
-            return "0"
-        case 1:
-            return "15"
-        case 2:
-            return "30"
-        default:
-            return "40"
-        }
     }
     
     private func calculateSections(_ match: Match) {
@@ -122,84 +107,37 @@ class ScoreHistoryViewModel: ObservableObject {
         var team1WonSets = 0
         var team2WonSets = 0
         for (setIndex, aSet) in sets.enumerated() {
-            var servedByIndex = (setIndex % ServingPlayer.allCases.count) - 1
             let games = aSet.games.allObjectsOfType(Game.self)
             var team1GamesWon = 0
             var team2GamesWon = 0
             var gameSections = [GameScoreSection]()
             for (gameIndex, game) in games.enumerated() {
                 let points = game.points.allObjectsOfType(GamePoint.self)
-                if !game.isTieBreak {
-                    servedByIndex += 1
+                let scoreServingPlayer = points.first.map { point in
+                    ScoreServingPlayer(alignment: teams[0].players.contains(point.servedBy) ? .left : .right,
+                                       playerName: point.servedBy.name.uppercased())
                 }
-                let servingPlayer = ServingPlayer(rawValue: servedByIndex % ServingPlayer.allCases.count) ?? .t1p1
-                var servingPlayerName: String? = nil
-                if let player = servingPlayer.team1ServingPlayer(players: teams[0].players.allObjectsOfType(Player.self)) {
-                    servingPlayerName = MatchPlayer(id: player.id, name: player.name, shortName: player.shortName.uppercased()).name.uppercased()
-                }
-                if let player = servingPlayer.team2ServingPlayer(players: teams[1].players.allObjectsOfType(Player.self)) {
-                    servingPlayerName = MatchPlayer(id: player.id, name: player.name, shortName: player.shortName.uppercased()).name.uppercased()
-                }
-                var scoreServingPlayer: ScoreServingPlayer?
-                if let servingPlayerName {
-                    scoreServingPlayer = ScoreServingPlayer(alignment: ScoreAlignment(servingPlayer: servingPlayer), playerName: servingPlayerName)
-                } else {
-                    scoreServingPlayer = nil
-                }
-                
+
                 var scores = [ScoreRow]()
                 var team1Points = 0
                 var team2Points = 0
-                if game.isTieBreak {
-                    // reset order
-                    servedByIndex = (setIndex % ServingPlayer.allCases.count)
-                }
-                for (pointIndex, point) in points.enumerated() {
-                    if game.isTieBreak {
-                        if pointIndex == 1 {
-                            servedByIndex += 1
-                        } else if pointIndex%2 == 1 {
-                            servedByIndex += 1
-                        }
-                        var servingPlayerName: String? = nil
-                        let servingPlayer = ServingPlayer(rawValue: servedByIndex % ServingPlayer.allCases.count) ?? .t1p1
-                        if let player = servingPlayer.team1ServingPlayer(players: teams[0].players.allObjectsOfType(Player.self)) {
-                            servingPlayerName = MatchPlayer(id: player.id, name: player.name, shortName: player.shortName.uppercased()).shortName.uppercased()
-                        }
-                        if let player = servingPlayer.team2ServingPlayer(players: teams[1].players.allObjectsOfType(Player.self)) {
-                            servingPlayerName = MatchPlayer(id: player.id, name: player.name, shortName: player.shortName.uppercased()).shortName.uppercased()
-                        }
-                        if let servingPlayerName {
-                            scoreServingPlayer = ScoreServingPlayer(alignment: ScoreAlignment(servingPlayer: servingPlayer), playerName: servingPlayerName)
-                        } else {
-                            scoreServingPlayer = nil
-                        }
-                    }
+                for point in points {
+                    let pointServer = ScoreServingPlayer(
+                        alignment: teams[0].players.contains(point.servedBy) ? .left : .right,
+                        playerName: point.servedBy.shortName.uppercased())
                     if point.winner == teams[0] {
                         team1Points += 1
                     } else {
                         team2Points += 1
                     }
                     
-                    if game.isTieBreak {
-                        scores.append(.regular(left: "\(team1Points)", right: "\(team2Points)", servingPlayer: scoreServingPlayer))
+                    let score = MatchEngine.Score(first: Int32(team1Points), second: Int32(team2Points))
+                    let (left, right) = MatchEngine.displayPoints(score, isTieBreak: game.isTieBreak)
+                    if !game.isTieBreak && match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue
+                        && score == MatchEngine.Score(first: 3, second: 3) {
+                        scores.append(.goldenPoint)
                     } else {
-                        let isGoldenPoint = match.rule.gameTieBreak == GameTieBreak.goldenRule.rawValue
-                        if max(team1Points, team2Points) > 3 {
-                            if team1Points == team2Points {
-                                if isGoldenPoint {
-                                    scores.append(.goldenPoint)
-                                } else {
-                                    scores.append(.regular(left: "40", right: "40", servingPlayer: nil))
-                                }
-                            } else if team1Points > team2Points {
-                                scores.append(.regular(left: "AD", right: "-", servingPlayer: nil))
-                            } else {
-                                scores.append(.regular(left: "-", right: "AD", servingPlayer: nil))
-                            }
-                        } else {
-                            scores.append(.regular(left: "\(self.pointsString(for: team1Points))", right: "\(self.pointsString(for: team2Points))", servingPlayer: nil))
-                        }
+                        scores.append(.regular(left: left, right: right, servingPlayer: game.isTieBreak ? pointServer : nil))
                     }
                 }
                 if let winner = game.winner {
@@ -210,7 +148,7 @@ class ScoreHistoryViewModel: ObservableObject {
                     }
                     let team1TeamScore = TeamScore(value: "\(team1GamesWon)", hasWon: winner == teams[0])
                     let team2TeamScore = TeamScore(value: "\(team2GamesWon)", hasWon: winner != teams[0])
-                    scores.removeLast()
+                    if !scores.isEmpty { scores.removeLast() }
                     
                     gameSections.append(GameScoreSection(id: gameIndex,
                                                          scores: scores,
@@ -254,7 +192,10 @@ struct ScoreHistoryView: View {
     private let scoreWidth: CGFloat = 50
     private let scoreHeaderWidth: CGFloat = 20
     private let separatorWidth: CGFloat = 20
-    @ObservedObject var viewModel: ScoreHistoryViewModel
+    @StateObject private var viewModel: ScoreHistoryViewModel
+    init(matchService: MatchService) {
+        _viewModel = StateObject(wrappedValue: ScoreHistoryViewModel(matchService: matchService))
+    }
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTabIndex: Int = 0
     
@@ -418,6 +359,9 @@ struct ScoreHistoryView: View {
             .ignoresSafeArea(edges: .bottom)
             .background(Color(UIColor.systemGroupedBackground))
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .onChange(of: viewModel.sections.count) { _, count in
+                selectedTabIndex = min(selectedTabIndex, max(0, count - 1))
+            }
             .onChange(of: viewModel.dismiss) { oldValue, newValue in
                 if newValue {
                     dismiss()

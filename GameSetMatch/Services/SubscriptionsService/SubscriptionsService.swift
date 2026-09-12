@@ -1,37 +1,48 @@
-//
-//  SubscriptionsService.swift
-//  GameSetMatch
-//
-//  Created by Ashamaz on 16/3/24.
-//
-
 import StoreKit
 import Combine
 
-class SubscriptionsService: ObservableObject {
+@MainActor
+final class SubscriptionsService: ObservableObject {
     static let passGroupId = "21465250"
-    
-    private enum SubscriptionTypes: String, CaseIterable {
-        case annual = "gsm_aa_999_1y_1w0"
-        case monthly = "gsm_aa_099_1y_1w0"
+    @Published private(set) var hasSubscription = false
+
+    static func grantsAccess(_ state: Product.SubscriptionInfo.RenewalState) -> Bool {
+        state == .subscribed || state == .inGracePeriod
     }
 
     static func hasSubscription(in statuses: [Product.SubscriptionInfo.Status]) -> Bool {
-        for status in statuses {
-            switch status.state {
-            case .expired, .revoked:
-                continue
-            default:
-                return true
+        statuses.contains { status in
+            guard grantsAccess(status.state),
+                  case .verified(let transaction) = status.transaction,
+                  case .verified = status.renewalInfo else { return false }
+            return transaction.subscriptionGroupID == passGroupId && transaction.revocationDate == nil
+        }
+    }
+
+    func update(_ statuses: [Product.SubscriptionInfo.Status]) {
+        hasSubscription = Self.hasSubscription(in: statuses)
+    }
+
+    func refresh() async {
+        var entitled = false
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result,
+               transaction.subscriptionGroupID == Self.passGroupId,
+               transaction.revocationDate == nil {
+                entitled = true
             }
         }
-        
-        return false
+        hasSubscription = entitled
     }
-    
-    @Published var hasSubscription = false
-    
-    init(hasSubscription: Bool = false) {
-        self.hasSubscription = hasSubscription
+
+    func observeTransactions() async {
+        await refresh()
+        for await result in Transaction.updates {
+            guard !Task.isCancelled else { return }
+            if case .verified(let transaction) = result {
+                await refresh()
+                await transaction.finish()
+            }
+        }
     }
 }

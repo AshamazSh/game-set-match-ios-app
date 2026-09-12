@@ -1,6 +1,105 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Best of sets:": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Максимум сетов:"
+          }
+        }
+      }
+    },
+    "Unable to complete action": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось выполнить действие"
+          }
+        }
+      }
+    },
+    "OK": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ОК"
+          }
+        }
+      }
+    },
+    "The match data is incomplete.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Данные матча неполные."
+          }
+        }
+      }
+    },
+    "Choose an odd number of sets between 1 and 9.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите нечётное число сетов от 1 до 9."
+          }
+        }
+      }
+    },
+    "The match has changed. Check the score and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Матч изменился. Проверьте счёт и повторите действие."
+          }
+        }
+      }
+    },
+    "Unable to process the watch request.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось обработать запрос с часов."
+          }
+        }
+      }
+    },
+    "Connect to your iPhone and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключитесь к iPhone и повторите действие."
+          }
+        }
+      }
+    },
+    "Could not confirm the action. Check the score on your iPhone before trying again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось подтвердить действие. Проверьте счёт на iPhone перед повторной попыткой."
+          }
+        }
+      }
+    },
     "" : {
 
     },

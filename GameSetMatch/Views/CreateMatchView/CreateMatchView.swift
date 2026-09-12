@@ -10,6 +10,7 @@ import CoreData
 import StoreKit
 import Combine
 
+@MainActor
 class TeamInfo: ObservableObject {
     @Published var firstPlayer: MatchPlayer
     @Published var secondPlayer: MatchPlayer
@@ -66,120 +67,6 @@ class TeamInfo: ObservableObject {
     }
 }
 
-class CustomRule: ObservableObject {
-    enum PlayMode: Identifiable, CaseIterable {
-        var id: Self { self }
-        
-        case single
-        case double
-        
-        var title: String {
-            switch self {
-            case .single:
-                "1x1"
-            case .double:
-                "2x2"
-            }
-        }
-    }
-    @Published var duration: Int32 = 1
-    @Published var goldenRule = false
-    @Published var playMode = PlayMode.single
-    @Published var tieBreak = true
-    @Published var matchType: MatchType = MatchType.tennis
-    private var cancellables = Set<AnyCancellable>()
-    
-    init(duration: Int32 = 1, goldenRule: Bool = false, playMode: PlayMode = PlayMode.single, tieBreak: Bool = true, matchType: MatchType = MatchType.tennis) {
-        self.duration = duration
-        self.goldenRule = goldenRule
-        self.playMode = playMode
-        self.tieBreak = tieBreak
-        self.matchType = matchType
-        
-        subscribeToChanges()
-    }
-    
-    private func subscribeToChanges() {
-        $duration
-            .subscribe(on: DispatchQueue.main)
-            .removeDuplicates()
-            .sink { [weak self] newValue in
-                guard let self,
-                      self.matchType != .custom else { return }
-                if newValue > 1 {
-                    self.matchType = .custom
-                }
-            }
-            .store(in: &cancellables)
-        
-        $goldenRule
-            .subscribe(on: DispatchQueue.main)
-            .removeDuplicates()
-            .sink { [weak self] newValue in
-                guard let self else { return }
-                switch self.matchType {
-                case .tennis, .tennis2x2:
-                    if newValue == true {
-                        self.matchType = .custom
-                    }
-                case .padel:
-                    if newValue == false {
-                        self.matchType = .custom
-                    }
-                case .custom:
-                    break
-                }
-            }
-            .store(in: &cancellables)
-        
-        $tieBreak
-            .subscribe(on: DispatchQueue.main)
-            .removeDuplicates()
-            .sink { [weak self] newValue in
-                guard let self else { return }
-                switch self.matchType {
-                case .tennis, .tennis2x2, .padel:
-                    if newValue == false {
-                        self.matchType = .custom
-                    }
-                case .custom:
-                    break
-                }
-            }
-            .store(in: &cancellables)
-        
-        $matchType
-            .subscribe(on: DispatchQueue.main)
-            .removeDuplicates()
-            .sink { [weak self] newValue in
-                guard let self else { return }
-                switch newValue {
-                case .tennis:
-                    self.duration = 1
-                    self.goldenRule = false
-                    self.tieBreak = true
-                    self.playMode = .single
-                    
-                case .tennis2x2:
-                    self.duration = 1
-                    self.goldenRule = false
-                    self.tieBreak = true
-                    self.playMode = .double
-                    
-                case .padel:
-                    self.duration = 1
-                    self.goldenRule = true
-                    self.tieBreak = true
-                    self.playMode = .double
-                    
-                case .custom:
-                    break
-                }
-            }
-            .store(in: &cancellables)
-    }
-}
-
 struct CreateMatchView: View {
     private enum SelectedPlayer: Identifiable, Hashable {
         var id: Self { self }
@@ -191,16 +78,17 @@ struct CreateMatchView: View {
     }
     
     init(context: NSManagedObjectContext) {
-        self._team1 = ObservedObject(initialValue: TeamInfo(isFirstTeam: true, context: context))
-        self._team2 = ObservedObject(initialValue: TeamInfo(isFirstTeam: false, context: context))
+        self._team1 = StateObject(wrappedValue: TeamInfo(isFirstTeam: true, context: context))
+        self._team2 = StateObject(wrappedValue: TeamInfo(isFirstTeam: false, context: context))
     }
     
     @EnvironmentObject private var coreDataManager: CoreDataManager
     @EnvironmentObject private var matchService: MatchService
-    @ObservedObject private var team1: TeamInfo
-    @ObservedObject private var team2: TeamInfo
-    @ObservedObject private var customRule: CustomRule = CustomRule()
-    @State private var isSubscribed: Bool = false
+    @StateObject private var team1: TeamInfo
+    @StateObject private var team2: TeamInfo
+    @StateObject private var customRule: CustomRule = CustomRule()
+    @EnvironmentObject private var subscriptions: SubscriptionsService
+    private var isSubscribed: Bool { subscriptions.hasSubscription }
     @State private var showSubscriptionView = false
     @State private var selectedPlayer: SelectedPlayer? = nil
     private var isValid: Bool {
@@ -213,13 +101,13 @@ struct CreateMatchView: View {
     private var matchTypeDescription: some View {
         VStack {
             VStack {
-                LabeledContent("Sets:") {
+                LabeledContent("Best of sets:") {
                     Stepper(String(customRule.duration)) {
                         guard customRule.duration < 9 else { return }
-                        customRule.duration += 1
+                        customRule.duration += 2
                     } onDecrement: {
                         guard customRule.duration > 1 else { return }
-                        customRule.duration -= 1
+                        customRule.duration -= 2
                     }
                 }
                 LabeledContent {
@@ -335,10 +223,13 @@ struct CreateMatchView: View {
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
                 Button {
-                    matchService.match = try? coreDataManager.createMatch(customRule.matchType,
-                                                                          customRule: customRule.matchType == .custom ? customRule : nil,
-                                                                          players1: Array(team1.players().prefix(isSingleMatch ? 1 : 2)),
-                                                                          players2: Array(team2.players().prefix(isSingleMatch ? 1 : 2)))
+                    matchService.perform {
+                        matchService.match = try coreDataManager.createMatch(
+                            customRule.matchType,
+                            customRule: customRule.matchType == .custom ? customRule : nil,
+                            players1: Array(team1.players().prefix(isSingleMatch ? 1 : 2)),
+                            players2: Array(team2.players().prefix(isSingleMatch ? 1 : 2)))
+                    }
                 } label: {
                     Text("Create")
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 44, maxHeight: 44)
@@ -364,39 +255,7 @@ struct CreateMatchView: View {
                     PlayersSelectionView(selectedPlayer: $team1.firstPlayer)
                 }
             }
-            .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { taskState in
-                if let statuses = taskState.value {
-                    isSubscribed = SubscriptionsService.hasSubscription(in: statuses)
-                }
-            }
-            .task {
-                for await result in Transaction.updates {
-                    let transaction = checkVerified(result)
-                    
-                    await self.updateCustomerProductStatus()
-                    
-                    await transaction?.finish()
-                }
-            }
         }
     }
     
-    @MainActor
-    func updateCustomerProductStatus() async {
-        for await result in Transaction.currentEntitlements {
-            if let transaction = checkVerified(result) {
-                await transaction.finish()
-            }
-        }
-    }
-    
-    private func checkVerified<T>(_ result: VerificationResult<T>) -> T? {
-        ///Check whether the JWS passes StoreKit verification.
-        switch result {
-        case .verified(let safe):
-            return safe
-        default:
-            return nil
-        }
-    }
 }

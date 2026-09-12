@@ -14,7 +14,8 @@ struct MatchControl: View {
         layout ?? .vertical
     }
     @State private var layout: LayoutDirection?
-    @State private var isSubscribed: Bool = false
+    @EnvironmentObject private var subscriptions: SubscriptionsService
+    private var isSubscribed: Bool { subscriptions.hasSubscription }
     @State private var showMatchLog: Bool = false
     private var matchState: MatchState? {
         matchService.matchState
@@ -69,7 +70,7 @@ struct MatchControl: View {
                        isSubscribed {
                         ToolbarItem(placement: .topBarLeading) {
                             Button("Play again") {
-                                matchService.match = try? coreDataManager.replayMatch(match)
+                                matchService.perform { matchService.match = try coreDataManager.replayMatch(match) }
                             }
                         }
                     }
@@ -83,7 +84,7 @@ struct MatchControl: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        matchService.match = nil
+                        matchService.closeMatch()
                     } label: {
                         Image(systemName: "xmark")
                     }
@@ -93,13 +94,9 @@ struct MatchControl: View {
                 updateLayoutDirection(with: UIDevice.current.orientation)
             }
             .sheet(isPresented: $showMatchLog) {
-                ScoreHistoryView(viewModel: ScoreHistoryViewModel(matchService: matchService))
+                ScoreHistoryView(matchService: matchService)
             }
-            .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { taskState in
-                if let statuses = taskState.value {
-                    isSubscribed = SubscriptionsService.hasSubscription(in: statuses)
-                }
-            }
+
             .onRotate { newOrientation in
                 updateLayoutDirection(with: newOrientation)
             }

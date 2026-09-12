@@ -35,26 +35,18 @@ struct MatchesHistoryView: View {
         return dateFormatter.string(from: date)
     }
     
-    private var sections: [(String, [Match])] {
-        var allMatches = [String: [Match]]()
-        for match in matches {
-            if let playMode = MatchType(rawValue: match.rule.playMode) {
-                var current = allMatches[playMode.name] ?? [Match]()
-                current.append(match)
-                allMatches[match.rule.name] = current
-            }
+    static func groupedMatches(_ matches: [Match]) -> [(String, [Match])] {
+        let groups = Dictionary(grouping: matches, by: { $0.rule.playMode })
+        return groups.keys.sorted().compactMap { key in
+            guard let type = MatchType(rawValue: key), let matches = groups[key] else { return nil }
+            return (type.name, matches)
         }
-        var result = [(String, [Match])]()
-        for key in allMatches.keys.sorted() {
-            if let current = allMatches[key] {
-                result.append((key, current))
-            }
-        }
-        
-        return result
     }
-    
-    @State private var isSubscribed: Bool = false
+
+    private var sections: [(String, [Match])] { Self.groupedMatches(Array(matches)) }
+
+    @EnvironmentObject private var subscriptions: SubscriptionsService
+    private var isSubscribed: Bool { subscriptions.hasSubscription }
     @State private var showSubscriptionView = false
     @State private var showResetContentConfirmation = false
     @State private var editMode = EditMode.inactive
@@ -79,7 +71,7 @@ struct MatchesHistoryView: View {
                 }
                 ForEach(sections, id: \.0) { pair in
                     Section(pair.0) {
-                        ForEach(Array(pair.1.enumerated()), id: \.offset) { index, match in
+                        ForEach(Array(pair.1.enumerated()), id: \.element.objectID) { index, match in
                             if match.teams.allObjectsOfType(Team.self).count > 1 {
                                 Button(action: {
                                     if !editMode.isEditing && (isSubscribed || index == 0) {
@@ -117,10 +109,7 @@ struct MatchesHistoryView: View {
                             }
                         }
                         .onDelete { indexSet in
-                            for index in indexSet {
-                                context.delete(pair.1[index])
-                            }
-                            try? context.save()
+                            matchService.deleteMatches(indexSet.map { pair.1[$0] })
                         }
                     }
                 }
@@ -153,10 +142,7 @@ struct MatchesHistoryView: View {
                     title: Text("Delete all matches?"),
                     message: Text("This action can't be reverted"),
                     primaryButton: .destructive(Text("Yes"), action: {
-                        for match in matches {
-                            context.delete(match)
-                        }
-                        try? context.save()
+                        matchService.deleteMatches(Array(matches))
                     }),
                     secondaryButton: .cancel()
                 )
@@ -164,41 +150,8 @@ struct MatchesHistoryView: View {
             .sheet(isPresented: $showSubscriptionView, content: {
                 SubscriptionView()
             })
-            .subscriptionStatusTask(for: SubscriptionsService.passGroupId) { taskState in
-                if let statuses = taskState.value {
-                    isSubscribed = SubscriptionsService.hasSubscription(in: statuses)
-                }
-            }
-            .task {
-                for await result in Transaction.updates {
-                    let transaction = checkVerified(result)
-
-                    await self.updateCustomerProductStatus()
-
-                    await transaction?.finish()
-                }
-            }
             .navigationTitle("History")
         }
     }
     
-    @MainActor
-    func updateCustomerProductStatus() async {
-        for await result in Transaction.currentEntitlements {
-            if let transaction = checkVerified(result) {
-                await transaction.finish()
-            }
-        }
-    }
-
-    private func checkVerified<T>(_ result: VerificationResult<T>) -> T? {
-        ///Check whether the JWS passes StoreKit verification.
-        switch result {
-        case .verified(let safe):
-            return safe
-        default:
-            return nil
-        }
-    }
-
 }
