@@ -62,7 +62,7 @@ struct MatchControl: View {
             .toolbar {
                 if matchState?.isSuperTieBreak == true {
                     ToolbarItem(placement: .principal) { Text("Super tiebreak").font(.caption) }
-                } else if let rule = matchState?.decidingPointRule {
+                } else if let rule = matchState?.decidingPointRule, rule != .star {
                     ToolbarItem(placement: .principal) { Text(rule.title).font(.caption) }
                 }
                 if let match = matchService.match {

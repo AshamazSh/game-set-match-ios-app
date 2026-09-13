@@ -45,7 +45,7 @@ struct MatchControlWatchView: View {
             VStack {
                 if viewModel.matchState.isSuperTieBreak == true {
                     Text("Super tiebreak").font(.caption)
-                } else if let rule = viewModel.matchState.decidingPointRule {
+                } else if let rule = viewModel.matchState.decidingPointRule, rule != .star {
                     Text(rule.title).font(.caption)
                 }
                 teamScore1
