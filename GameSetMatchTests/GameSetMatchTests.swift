@@ -484,8 +484,8 @@ final class GameSetMatchTests: XCTestCase {
         XCTAssertNil(h.service.match)
     }
 
-    @MainActor func testMigrationV1AndV2PreservesPlayableLegacyDeuceRules() throws {
-        for version in ["GameSetMatch", "GameSetMatchV2"] {
+    @MainActor func testMigrationV1V2V3PreservesPlayableLegacyDeuceRules() throws {
+        for version in ["GameSetMatch", "GameSetMatchV2", "GameSetMatchV3"] {
             for golden in [false, true] {
                 try verifyLegacyMigration(version: version, golden: golden)
             }
@@ -513,6 +513,11 @@ final class GameSetMatchTests: XCTestCase {
         rule.duration = 7
         rule.tieBreak = SetTieBreak.firstToSix.rawValue
         rule.gameTieBreak = (golden ? GameTieBreak.goldenRule : .fullTieBreak).rawValue
+        if version == "GameSetMatchV3" {
+            rule.formatCode = MatchFormat.singles.rawValue
+            rule.deuceRuleCode = (golden ? DeuceRule.golden : .advantage).rawValue
+            rule.superTieBreak = true
+        }
         match.rule = rule
         for index in 0..<2 {
             let team = NSEntityDescription.insertNewObject(forEntityName: "Team", into: oldContext) as! Team
@@ -541,19 +546,106 @@ final class GameSetMatchTests: XCTestCase {
         let restored = try XCTUnwrap(repository.match(byId: "legacy"))
         XCTAssertEqual(restored.createdAt, Date(timeIntervalSince1970: 1_700_000_000))
         XCTAssertEqual(try context.count(for: GamePoint.fetchRequest()), 6)
-        XCTAssertNil(restored.rule.deuceRuleCode)
-        XCTAssertNil(restored.rule.formatCode)
-        XCTAssertFalse(restored.rule.superTieBreak)
+        XCTAssertEqual(restored.rule.deuceRuleCode, version == "GameSetMatchV3" ? (golden ? DeuceRule.golden : .advantage).rawValue : nil)
+        XCTAssertEqual(restored.rule.formatCode, version == "GameSetMatchV3" ? MatchFormat.singles.rawValue : nil)
+        XCTAssertFalse(restored.rule.notifySideChanges)
+        XCTAssertEqual(restored.rule.superTieBreak, version == "GameSetMatchV3")
         XCTAssertFalse((restored.sets.firstObject as! MatchSet).isSuperTieBreak)
-        let expected = MatchRules(bestOf: 7, deuceRule: golden ? .golden : .advantage, tieBreak: false)
+        let expected = MatchRules(bestOf: 7, deuceRule: golden ? .golden : .advantage, superTieBreak: version == "GameSetMatchV3", tieBreak: false)
         XCTAssertEqual(repository.rules(for: restored), expected)
-        try repository.awardPoint(in: restored, to: 0)
+        XCTAssertEqual(try repository.awardPoint(in: restored, to: 0), golden)
         XCTAssertEqual((restored.sets.firstObject as! MatchSet).games.count, golden ? 2 : 1)
+        if !golden { XCTAssertTrue(try repository.awardPoint(in: restored, to: 0)) }
         let replay = try repository.replayMatch(restored)
         XCTAssertEqual(repository.rules(for: replay), expected)
         XCTAssertEqual(replay.rule.duration, 7)
-        XCTAssertNil(replay.rule.formatCode)
+        XCTAssertEqual(replay.rule.formatCode, restored.rule.formatCode)
         context.reset(); try coordinator.remove(store)
+    }
+
+    func testSideChangeSchedulesAndMatchCompletion() {
+        let point = MatchEngine.Outcome(gameWon: false, setWon: false, matchWon: false, nextGameIsTieBreak: false)
+        let game = MatchEngine.Outcome(gameWon: true, setWon: false, matchWon: false, nextGameIsTieBreak: false)
+        let finished = MatchEngine.Outcome(gameWon: true, setWon: true, matchWon: true, nextGameIsTieBreak: false)
+        for count in 0...25 {
+            XCTAssertEqual(MatchEngine.shouldChangeSides(completedGames: 0, completedPoints: count,
+                isTieBreak: true, isSuperTieBreak: false, outcome: point), [6, 12, 18, 24].contains(count))
+            XCTAssertEqual(MatchEngine.shouldChangeSides(completedGames: 0, completedPoints: count,
+                isTieBreak: true, isSuperTieBreak: true, outcome: point), [1, 7, 13, 19, 25].contains(count))
+        }
+        for count in 1...12 {
+            XCTAssertEqual(MatchEngine.shouldChangeSides(completedGames: count, completedPoints: 4,
+                isTieBreak: false, isSuperTieBreak: false, outcome: game), count % 2 == 1)
+            XCTAssertFalse(MatchEngine.shouldChangeSides(completedGames: count, completedPoints: 4,
+                isTieBreak: false, isSuperTieBreak: false, outcome: point))
+            XCTAssertFalse(MatchEngine.shouldChangeSides(completedGames: count, completedPoints: 6,
+                isTieBreak: true, isSuperTieBreak: false, outcome: finished))
+        }
+    }
+
+    func testConfigurationIgnoresRetiredNotificationSetting() throws {
+        let old = Data(#"{"format":"singles","sets":3,"superTieBreak":false,"deuceRule":"star","notifySideChanges":false}"#.utf8)
+        XCTAssertEqual(try JSONDecoder().decode(MatchConfiguration.self, from: old), MatchConfiguration())
+        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(MatchConfiguration())) as! [String: Any]
+        XCTAssertNil(object["notifySideChanges"])
+    }
+
+    @MainActor func testNotificationOnCommittedOddGameUndoAndReplay() throws {
+        let h = try Harness(), match = try h.create()
+        for _ in 0..<3 { h.service.pointWonByTeam1(); XCTAssertNil(h.service.sideChangeEvent) }
+        h.context.failSave = true
+        h.service.pointWonByTeam1()
+        XCTAssertNil(h.service.sideChangeEvent)
+        h.context.failSave = false
+        h.service.pointWonByTeam1()
+        let first = try XCTUnwrap(h.service.sideChangeEvent)
+        XCTAssertEqual(h.service.matchState?.sideChangeEvent, first)
+        h.service.undoLastPoint()
+        XCTAssertNil(h.service.sideChangeEvent)
+        h.service.pointWonByTeam1()
+        XCTAssertNotEqual(h.service.sideChangeEvent?.id, first.id)
+        h.service.match = match
+        XCTAssertNil(h.service.sideChangeEvent)
+        for _ in 0..<4 { h.service.pointWonByTeam1(); XCTAssertNil(h.service.sideChangeEvent) }
+        let replay = try h.repository.replayMatch(match)
+        h.service.match = replay
+        for _ in 0..<4 { h.service.pointWonByTeam1() }
+        XCTAssertNotNil(h.service.sideChangeEvent)
+    }
+
+    @MainActor func testNotificationsAlwaysEnabledAndWatchCommandDeduplicated() throws {
+        let h = try Harness()
+        _ = try h.create()
+        for _ in 0..<4 { h.service.pointWonByTeam1() }
+        XCTAssertNotNil(h.service.sideChangeEvent)
+        _ = try h.create()
+        for _ in 0..<3 { h.service.pointWonByTeam1() }
+        let command = h.command(.teamAScored)
+        h.receive(command)
+        let event = try XCTUnwrap(h.service.sideChangeEvent)
+        h.receive(command)
+        XCTAssertEqual(h.service.sideChangeEvent, event)
+        h.receive(h.command(.currentStatus))
+        XCTAssertEqual(h.service.sideChangeEvent, event)
+    }
+
+    @MainActor func testRepositoryTiebreakAndSuperTiebreakNotifications() throws {
+        let h = try Harness(), match = try h.create(bestOf: 3)
+        for _ in 0..<6 { try h.winGame(match, team: 0); try h.winGame(match, team: 1) }
+        for point in 1...12 {
+            XCTAssertEqual(try h.repository.awardPoint(in: match, to: point % 2), point % 6 == 0)
+        }
+        XCTAssertFalse(try h.repository.awardPoint(in: match, to: 0))
+        // At 7:6 games the normal set ends with an odd game total.
+        XCTAssertTrue(try h.repository.awardPoint(in: match, to: 0))
+        let superMatch = try h.create(bestOf: 3, superTieBreak: true)
+        try h.winSet(superMatch, team: 0); try h.winSet(superMatch, team: 1)
+        for point in 1...18 {
+            XCTAssertEqual(try h.repository.awardPoint(in: superMatch, to: point % 2), [1, 7, 13].contains(point))
+        }
+        XCTAssertTrue(try h.repository.awardPoint(in: superMatch, to: 0)) // point 19
+        XCTAssertFalse(try h.repository.awardPoint(in: superMatch, to: 0)) // match over
+        XCTAssertNotNil(superMatch.winner)
     }
 
 }

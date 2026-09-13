@@ -14,6 +14,7 @@ final class GameSetMatchUITests: XCTestCase {
         XCTAssertTrue(app.buttons["deuceRule"].label.contains("Star point"), app.buttons["deuceRule"].debugDescription)
         XCTAssertTrue(app.buttons["decidingSet"].label.contains("Normal set"), app.buttons["decidingSet"].debugDescription)
         XCTAssertTrue(app.staticTexts["Two rounds of advantage. At the third deuce, the next point wins the game."].exists)
+        XCTAssertFalse(app.switches["notifySideChanges"].exists)
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Default match configuration"
         attachment.lifetime = .keepAlways

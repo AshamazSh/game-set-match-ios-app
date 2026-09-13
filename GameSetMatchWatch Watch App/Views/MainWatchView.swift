@@ -39,6 +39,7 @@ struct MainWatchView: View {
                 .ignoresSafeArea()
             }
         }
+        .modifier(SideChangeNotification(event: connectivityManager.sideChangeEvent))
         .alert("Unable to complete action", isPresented: Binding(get: { connectivityManager.errorMessage != nil }, set: { if !$0 { connectivityManager.errorMessage = nil } })) {
             Button("OK") { connectivityManager.errorMessage = nil }
         } message: { Text(connectivityManager.errorMessage ?? "") }

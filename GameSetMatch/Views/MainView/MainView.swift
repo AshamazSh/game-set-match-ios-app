@@ -42,6 +42,7 @@ struct MainView: View {
                 .ignoresSafeArea()
         }
         .animation(.easeOut, value: showMatch)
+        .modifier(SideChangeNotification(event: matchService.sideChangeEvent))
         .alert("Unable to complete action", isPresented: Binding(
             get: { matchService.errorMessage != nil },
             set: { if !$0 { matchService.errorMessage = nil } })) {

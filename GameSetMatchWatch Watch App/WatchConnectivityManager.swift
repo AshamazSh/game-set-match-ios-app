@@ -6,6 +6,8 @@ import Combine
 final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published private(set) var isConnected = false
     @Published private(set) var didRecieveMatchState = false
+    @Published private(set) var sideChangeEvent: SideChangeEvent?
+    private var lastSideChangeID: UUID?
     @Published private(set) var matchState: MatchState?
     @Published private(set) var isSendingRequest = false
     @Published var errorMessage: String?
@@ -25,7 +27,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.isConnected = activationState == .activated && session.isReachable
-            self.processMessage(session.receivedApplicationContext)
+            self.processMessage(session.receivedApplicationContext, live: false)
             if self.isConnected { self.sendRequest(.currentStatus) }
         }
     }
@@ -43,7 +45,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        Task { @MainActor [weak self] in self?.processMessage(applicationContext) }
+        Task { @MainActor [weak self] in self?.processMessage(applicationContext, live: false) }
     }
 
     func sendRequest(_ request: AppRequest, configuration: MatchConfiguration? = nil) {
@@ -68,7 +70,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         session.sendMessage(message, replyHandler: { [weak self] response in
             Task { @MainActor [weak self] in
                 self?.isSendingRequest = false
-                self?.processMessage(response)
+                self?.processMessage(response, live: request == .teamAScored || request == .teamBScored)
                 self?.errorMessage = response["error"] as? String
             }
         }, errorHandler: { [weak self] _ in
@@ -79,7 +81,7 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         })
     }
 
-    func processMessage(_ message: [String: Any]) {
+    func processMessage(_ message: [String: Any], live: Bool = true) {
         guard let raw = message["request"] as? String, let action = AppRequest(rawValue: raw),
               action == .newState || action == .resetMatch else { return }
         let version = (message["snapshotVersion"] as? NSNumber)?.int64Value
@@ -90,8 +92,15 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
             guard let object = message["object"] as? [String: Any],
                   let data = try? JSONSerialization.data(withJSONObject: object),
                   let state = try? JSONDecoder().decode(MatchState.self, from: data) else { return }
+            if live, !state.isCompleted, let event = state.sideChangeEvent,
+               event.isRecent, event.id != lastSideChangeID {
+                lastSideChangeID = event.id
+                sideChangeEvent = event
+            } else if state.sideChangeEvent == nil {
+                sideChangeEvent = nil
+            }
             matchState = state
-        } else { matchState = nil }
+        } else { matchState = nil; sideChangeEvent = nil }
         if let version { snapshotVersion = version }
         didRecieveMatchState = true
     }

@@ -13,6 +13,21 @@ struct MatchRules: Equatable {
 }
 
 enum MatchEngine {
+    /// Counts completed points (not service attempts) and completed games in this set.
+    static func shouldChangeSides(completedGames: Int, completedPoints: Int,
+                                  isTieBreak: Bool, isSuperTieBreak: Bool,
+                                  outcome: Outcome) -> Bool {
+        guard !outcome.matchWon else { return false }
+        if isTieBreak {
+            // A normal tiebreak completes the thirteenth game of the set.
+            if outcome.setWon { return !isSuperTieBreak }
+            return isSuperTieBreak
+                ? completedPoints > 0 && (completedPoints - 1) % 6 == 0
+                : completedPoints > 0 && completedPoints % 6 == 0
+        }
+        return outcome.gameWon && completedGames % 2 == 1
+    }
+
     struct Score: Equatable {
         var first: Int32 = 0
         var second: Int32 = 0

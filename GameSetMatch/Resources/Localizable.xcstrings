@@ -105,6 +105,22 @@
         }
       }
     },
+    "Change sides" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change sides"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Смена сторон"
+          }
+        }
+      }
+    },
     "Choose 1, 3 or 5 sets." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -364,6 +380,22 @@
         }
       }
     },
+    "Next set" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next set"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Следующий сет"
+          }
+        }
+      }
+    },
     "No matches played" : {
       "localizations" : {
         "ru" : {
@@ -501,6 +533,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Пожалуйста, вернитесь в приложение GameSetMach на iPhone"
+          }
+        }
+      }
+    },
+    "Previous set" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous set"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Предыдущий сет"
           }
         }
       }
@@ -734,5 +782,5 @@
       }
     }
   },
-  "version" : "1.0"
+  "version" : "1.1"
 }

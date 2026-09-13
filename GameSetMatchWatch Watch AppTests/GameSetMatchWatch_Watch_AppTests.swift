@@ -1,4 +1,5 @@
 import XCTest
+import Combine
 @testable import GameSetMatch
 
 final class GameSetMatchWatch_Watch_AppTests: XCTestCase {
@@ -52,6 +53,38 @@ final class GameSetMatchWatch_Watch_AppTests: XCTestCase {
         manager.processMessage(["request": AppRequest.newState.rawValue, "snapshotVersion": Int64(2), "object": oldObject])
         XCTAssertNil(manager.matchState?.isSuperTieBreak)
         XCTAssertNil(manager.matchState?.decidingPointRule)
+    }
+
+    @MainActor func testSideChangeNotificationsIgnoreCachedExpiredAndDuplicateEvents() throws {
+        let manager = WatchConnectivityManager(activate: false)
+        var state = MatchState.empty
+        state.isCompleted = false
+        state.sideChangeEvent = SideChangeEvent()
+        func packet(_ version: Int) throws -> [String: Any] {
+            ["request": AppRequest.newState.rawValue, "snapshotVersion": version,
+             "object": try JSONSerialization.jsonObject(with: JSONEncoder().encode(state))]
+        }
+        var notifications = 0
+        let subscription = manager.$sideChangeEvent.compactMap { $0 }.sink { _ in notifications += 1 }
+        defer { subscription.cancel() }
+        manager.processMessage(try packet(1), live: false)
+        XCTAssertNil(manager.sideChangeEvent)
+        manager.processMessage(try packet(1))
+        XCTAssertEqual(notifications, 1)
+        manager.processMessage(try packet(1))
+        manager.processMessage(try packet(1), live: false)
+        XCTAssertEqual(notifications, 1)
+        state.sideChangeEvent = SideChangeEvent(createdAt: Date(timeIntervalSinceNow: -60))
+        manager.processMessage(try packet(2))
+        XCTAssertEqual(notifications, 1)
+        state.sideChangeEvent = SideChangeEvent()
+        manager.processMessage(try packet(1)) // stale snapshot, fresh event
+        XCTAssertEqual(notifications, 1)
+        manager.processMessage(try packet(3))
+        XCTAssertEqual(notifications, 2)
+        state.sideChangeEvent = nil // undo / ordinary point
+        manager.processMessage(try packet(4))
+        XCTAssertNil(manager.sideChangeEvent)
     }
 
 }

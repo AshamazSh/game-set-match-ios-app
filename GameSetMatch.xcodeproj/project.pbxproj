@@ -74,6 +74,8 @@
 		8F0F64F960E340A99068C081 /* CustomRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8FD3DC0978469FAA650281 /* CustomRule.swift */; };
 		F9923527F3594420BAF4B029 /* MatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82244A6AC51E4102BCDA5257 /* MatchEngine.swift */; };
 		0434DDB68DAF4A99A22BB651 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */; };
+		3A37BAC74DCA458A8371FEF8 /* SideChangeNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE18C5EE014E6D80C917D6; };
+		B3692E0354C240539815C374 /* SideChangeNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE18C5EE014E6D80C917D6; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -231,6 +233,8 @@
 		82244A6AC51E4102BCDA5257 /* MatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameSetMatch/Services/Domain/MatchEngine.swift"; sourceTree = SOURCE_ROOT; };
 		9366C0709F3947A196356714 /* GameSetMatchV2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV2.xcdatamodel; sourceTree = "<group>"; };
 		64200FB11A0F4ADBA35E0073 /* GameSetMatchV3.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV3.xcdatamodel; sourceTree = "<group>"; };
+		8E3D3A0BB6094D4AB2E2811D /* GameSetMatchV4.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV4.xcdatamodel; sourceTree = "<group>"; };
+		B4BE18C5EE014E6D80C917D6 /* SideChangeNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Views/SideChangeNotification.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -449,6 +453,7 @@
 				5E56272C2B9B415A00676D36 /* Enums.swift */,
 				5E56272A2B9B414000676D36 /* MatchPlayer.swift */,
 				5E5627282B9B411B00676D36 /* MatchState.swift */,
+				B4BE18C5EE014E6D80C917D6 /* SideChangeNotification.swift */,
 				82244A6AC51E4102BCDA5257 /* MatchEngine.swift */,
 				DF8FD3DC0978469FAA650281 /* CustomRule.swift */,
 			);
@@ -938,6 +943,7 @@
 				5EA1461D2B9F7CE9004B5BF3 /* MatchesHistoryView.swift in Sources */,
 				5E56272B2B9B414000676D36 /* MatchPlayer.swift in Sources */,
 				5E48C45E2B962C1E003A44E8 /* MatchService.swift in Sources */,
+				3A37BAC74DCA458A8371FEF8 /* SideChangeNotification.swift in Sources */,
 				F9923527F3594420BAF4B029 /* MatchEngine.swift in Sources */,
 				8F0F64F960E340A99068C081 /* CustomRule.swift in Sources */,
 				5E48C48C2B9640AA003A44E8 /* MatchSet+CoreDataClass.swift in Sources */,
@@ -989,6 +995,7 @@
 				5EA146202B9F9C13004B5BF3 /* TeamScoreView.swift in Sources */,
 				5EA146222B9F9C2F004B5BF3 /* TeamSetsScoreView.swift in Sources */,
 				5E5627342B9B638900676D36 /* WatchConnectivityManager.swift in Sources */,
+				B3692E0354C240539815C374 /* SideChangeNotification.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1542,8 +1549,9 @@
 				5E48C4382B961A18003A44E8 /* GameSetMatch.xcdatamodel */,
 				9366C0709F3947A196356714 /* GameSetMatchV2.xcdatamodel */,
 				64200FB11A0F4ADBA35E0073 /* GameSetMatchV3.xcdatamodel */,
+				8E3D3A0BB6094D4AB2E2811D /* GameSetMatchV4.xcdatamodel */,
 			);
-			currentVersion = 64200FB11A0F4ADBA35E0073 /* GameSetMatchV3.xcdatamodel */;
+			currentVersion = 8E3D3A0BB6094D4AB2E2811D /* GameSetMatchV4.xcdatamodel */;
 			path = GameSetMatch.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

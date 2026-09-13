@@ -23,6 +23,7 @@ struct MatchState: Codable {
         var isMatchWinner: Bool
     }
     
+    var sideChangeEvent: SideChangeEvent? = nil
     var isSuperTieBreak: Bool? = nil
     var decidingPointRule: DeuceRule? = nil
     var matchID: String? = nil
@@ -38,4 +39,11 @@ struct MatchState: Codable {
                                   isTieBreak: false,
                                   isGoldenPoint: false,
                                   isCompleted: true)
+}
+
+/// Transient notification; absent from persisted match history and old wire snapshots.
+struct SideChangeEvent: Codable, Equatable, Identifiable {
+    var id = UUID()
+    var createdAt = Date()
+    var isRecent: Bool { (0...3).contains(Date().timeIntervalSince(createdAt)) }
 }

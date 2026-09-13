@@ -23,6 +23,7 @@ extension ServingPlayer {
 /// Owns the active match and publishes only committed snapshots.
 @MainActor
 final class MatchService: ObservableObject {
+    @Published private(set) var sideChangeEvent: SideChangeEvent?
     @Published private(set) var matchState: MatchState?
     @Published var match: Match? { didSet { refresh() } }
     @Published var errorMessage: String?
@@ -82,8 +83,8 @@ final class MatchService: ObservableObject {
                 players2: type == .tennis ? [.playerTwo] : [.playerTwo, .playerTwoB])
         case .teamAScored, .teamBScored:
             guard let match, match.winner == nil else { throw CommandError.staleState }
-            try coreDataManager.awardPoint(in: match, to: command.action == .teamAScored ? 0 : 1)
-            refresh()
+            let changeSides = try coreDataManager.awardPoint(in: match, to: command.action == .teamAScored ? 0 : 1)
+            refresh(changeSides: changeSides)
         case .undo:
             guard let match else { throw CommandError.staleState }
             try coreDataManager.deleteLastPoint(in: match)
@@ -102,7 +103,10 @@ final class MatchService: ObservableObject {
     func pointWonByTeam2() { awardPoint(to: 1) }
     private func awardPoint(to team: Int) {
         guard let match else { return }
-        perform { try coreDataManager.awardPoint(in: match, to: team); refresh() }
+        perform {
+            let changeSides = try coreDataManager.awardPoint(in: match, to: team)
+            refresh(changeSides: changeSides)
+        }
     }
 
     func deleteMatches(_ matches: [Match]) {
@@ -113,7 +117,8 @@ final class MatchService: ObservableObject {
         }
     }
 
-    private func refresh() {
+    private func refresh(changeSides: Bool = false) {
+        sideChangeEvent = nil
         guard let match, !match.isDeleted else {
             defaults.removeObject(forKey: displayedMatchIdKey)
             matchState = nil
@@ -134,6 +139,10 @@ final class MatchService: ObservableObject {
             }
             var state = MatchState(team1: info(teams[0]), team2: info(teams[1]),
                 isTieBreak: false, isGoldenPoint: false, isCompleted: match.winner != nil)
+            if changeSides {
+                let event = SideChangeEvent()
+                state.sideChangeEvent = event
+            }
             state.matchID = match.id
             state.revision = match.revision
             for set in match.sets.allObjectsOfType(MatchSet.self) {
@@ -161,6 +170,7 @@ final class MatchService: ObservableObject {
                 state.team1.points = match.winner == teams[0] ? "🏆" : "-"
                 state.team2.points = match.winner == teams[1] ? "🏆" : "-"
             }
+            sideChangeEvent = state.sideChangeEvent
             matchState = state
             connectivityManager.sendState(state)
         } catch {

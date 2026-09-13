@@ -19,6 +19,8 @@ extension Rule {
     @NSManaged public var formatCode: String?
     @NSManaged public var deuceRuleCode: String?
     @NSManaged public var superTieBreak: Bool
+    // Retained for store compatibility; notifications are now unconditional.
+    @NSManaged public var notifySideChanges: Bool
     @NSManaged public var duration: Int32
     @NSManaged public var gameTieBreak: Int32
     @NSManaged public var name: String

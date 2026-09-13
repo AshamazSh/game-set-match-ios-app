@@ -142,8 +142,9 @@ final class CoreDataManager: ObservableObject {
         return player
     }
 
-    func awardPoint(in match: Match, to teamIndex: Int) throws {
-        guard match.winner == nil else { return }
+    @discardableResult
+    func awardPoint(in match: Match, to teamIndex: Int) throws -> Bool {
+        guard match.winner == nil else { return false }
         let teams = match.teams.allObjectsOfType(Team.self)
         guard teams.count == 2, teams.indices.contains(teamIndex),
               let set = match.sets.lastObject as? MatchSet,
@@ -154,6 +155,10 @@ final class CoreDataManager: ObservableObject {
             games: score(set.games.allObjectsOfType(Game.self).map(\.winner), teams: teams),
             sets: score(match.sets.allObjectsOfType(MatchSet.self).map(\.winner), teams: teams),
             isTieBreak: game.isTieBreak, rules: rules(for: match), tieBreakTarget: set.isSuperTieBreak ? 10 : 7)
+        let changeSides = MatchEngine.shouldChangeSides(
+            completedGames: set.games.allObjectsOfType(Game.self).filter { $0.winner != nil }.count + (outcome.gameWon ? 1 : 0),
+            completedPoints: game.points.count + 1, isTieBreak: game.isTieBreak,
+            isSuperTieBreak: set.isSuperTieBreak, outcome: outcome)
         try transaction {
             let point = GamePoint(entity: NSEntityDescription.entity(forEntityName: "GamePoint", in: context)!, insertInto: context)
             point.servedBy = server
@@ -173,6 +178,7 @@ final class CoreDataManager: ObservableObject {
             updateFinalScores(match, teams: teams)
             match.revision += 1
         }
+        return changeSides
     }
 
     func deleteLastPoint(in match: Match) throws {

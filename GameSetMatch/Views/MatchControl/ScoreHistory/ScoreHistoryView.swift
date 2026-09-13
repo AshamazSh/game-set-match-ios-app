@@ -190,15 +190,17 @@ class ScoreHistoryViewModel: ObservableObject {
 
 struct ScoreHistoryView: View {
     private let scoreWidth: CGFloat = 50
-    private let scoreHeaderWidth: CGFloat = 20
     private let separatorWidth: CGFloat = 20
     @StateObject private var viewModel: ScoreHistoryViewModel
     init(matchService: MatchService) {
         _viewModel = StateObject(wrappedValue: ScoreHistoryViewModel(matchService: matchService))
     }
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedTabIndex: Int = 0
-    
+    private var hasPreviousSet: Bool { selectedTabIndex > 0 }
+    private var hasNextSet: Bool { selectedTabIndex + 1 < viewModel.sections.count }
+
     private func setScore(forIndex index: Int) -> (TeamScore, TeamScore)? {
         guard index < viewModel.sections.count else { return (TeamScore(value: "0", hasWon: false), TeamScore(value: "0", hasWon: false)) }
         if let (left, right) = viewModel.sections[index].finalScore {
@@ -218,150 +220,160 @@ struct ScoreHistoryView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ZStack {
-                    HStack(alignment: .center) {
-                        Text(viewModel.team1Name)
-                            .foregroundStyle(.secondary)
-                            .font(.footnote)
-                        Spacer()
-                        Text(viewModel.team2Name)
-                            .foregroundStyle(.secondary)
-                            .font(.footnote)
-                    }
-                    if let (left, right) = setScore(forIndex: selectedTabIndex) {
-                        HStack {
-                            Text(left.value)
-                                .frame(width: scoreHeaderWidth)
-                                .multilineTextAlignment(.center)
-                                .fontWeight(.bold)
-                                .padding(.horizontal)
-                                .foregroundStyle(left.hasWon ? .green : .primary)
-                            Text(right.value)
-                                .frame(width: scoreHeaderWidth)
-                                .multilineTextAlignment(.center)
-                                .fontWeight(.bold)
-                                .padding(.horizontal)
-                                .foregroundStyle(right.hasWon ? .green : .primary)
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                Divider()
-                    .padding(.top)
-                TabView(selection: $selectedTabIndex) {
-                    ForEach(viewModel.sections) { section in
-                        List {
-                            ForEach(section.games) { game in
-                                Section {
-                                    ForEach(Array(game.scores.enumerated()), id: \.offset) { index, score in
-                                        switch score {
-                                        case .regular(let left, let right, let servingPlayer):
-                                            ZStack {
-                                                HStack {
-                                                    Spacer()
-                                                    Text(left)
-                                                        .frame(width: scoreWidth)
-                                                        .multilineTextAlignment(.center)
-                                                    Text(":")
-                                                        .frame(width: separatorWidth)
-                                                        .multilineTextAlignment(.center)
-                                                    Text(right)
-                                                        .frame(width: scoreWidth)
-                                                        .multilineTextAlignment(.center)
-                                                    Spacer()
-                                                }
-                                                if let servingPlayer {
+                GeometryReader { geometry in
+                    HStack(spacing: 0) {
+                        ForEach(viewModel.sections) { section in
+                            List {
+                                ForEach(section.games) { game in
+                                    Section {
+                                        ForEach(Array(game.scores.enumerated()), id: \.offset) { index, score in
+                                            switch score {
+                                            case .regular(let left, let right, let servingPlayer):
+                                                ZStack {
                                                     HStack {
-                                                        if servingPlayer.alignment == .right {
-                                                            Spacer()
-                                                        }
-                                                        Text(servingPlayer.playerName)
-                                                            .font(.caption)
-                                                            .foregroundStyle(.secondary)
-                                                        if servingPlayer.alignment == .left {
-                                                            Spacer()
+                                                        Spacer()
+                                                        Text(left)
+                                                            .frame(width: scoreWidth)
+                                                            .multilineTextAlignment(.center)
+                                                        Text(":")
+                                                            .frame(width: separatorWidth)
+                                                            .multilineTextAlignment(.center)
+                                                        Text(right)
+                                                            .frame(width: scoreWidth)
+                                                            .multilineTextAlignment(.center)
+                                                        Spacer()
+                                                    }
+                                                    if let servingPlayer {
+                                                        HStack {
+                                                            if servingPlayer.alignment == .right {
+                                                                Spacer()
+                                                            }
+                                                            Text(servingPlayer.playerName)
+                                                                .font(.caption)
+                                                                .foregroundStyle(.secondary)
+                                                            if servingPlayer.alignment == .left {
+                                                                Spacer()
+                                                            }
                                                         }
                                                     }
                                                 }
+                                            case .decidingPoint(let rule):
+                                                VStack {
+                                                    Text(rule.title).font(.caption).foregroundStyle(.secondary)
+                                                    HStack {
+                                                        Spacer()
+                                                        Text("40")
+                                                            .frame(width: scoreWidth)
+                                                            .multilineTextAlignment(.center)
+                                                        Text(":")
+                                                            .frame(width: separatorWidth)
+                                                            .multilineTextAlignment(.center)
+                                                        Text("40")
+                                                            .frame(width: scoreWidth)
+                                                            .multilineTextAlignment(.center)
+                                                        Spacer()
+                                                    }
+                                                }
                                             }
-                                        case .decidingPoint(let rule):
+                                        }
+                                        if let (left, right) = game.finalScore {
                                             VStack {
-                                                Text(rule.title).font(.caption).foregroundStyle(.secondary)
+                                                Divider()
                                                 HStack {
                                                     Spacer()
-                                                    Text("40")
+                                                    Text(left.value)
+                                                        .font(.title)
                                                         .frame(width: scoreWidth)
                                                         .multilineTextAlignment(.center)
+                                                        .foregroundStyle(left.hasWon ? .green : .primary)
                                                     Text(":")
+                                                        .font(.title)
                                                         .frame(width: separatorWidth)
                                                         .multilineTextAlignment(.center)
-                                                    Text("40")
+                                                    Text(right.value)
+                                                        .font(.title)
                                                         .frame(width: scoreWidth)
                                                         .multilineTextAlignment(.center)
+                                                        .foregroundStyle(right.hasWon ? .green : .primary)
                                                     Spacer()
                                                 }
                                             }
                                         }
-                                    }
-                                    if let (left, right) = game.finalScore {
-                                        VStack {
-                                            Divider()
+                                    } header: {
+                                        switch game.title {
+                                        case .tiebreak(let isSuper):
                                             HStack {
                                                 Spacer()
-                                                Text(left.value)
-                                                    .font(.title)
-                                                    .frame(width: scoreWidth)
-                                                    .multilineTextAlignment(.center)
-                                                    .foregroundStyle(left.hasWon ? .green : .primary)
-                                                Text(":")
-                                                    .font(.title)
-                                                    .frame(width: separatorWidth)
-                                                    .multilineTextAlignment(.center)
-                                                Text(right.value)
-                                                    .font(.title)
-                                                    .frame(width: scoreWidth)
-                                                    .multilineTextAlignment(.center)
-                                                    .foregroundStyle(right.hasWon ? .green : .primary)
+                                                Text(isSuper ? String(localized: "Super tiebreak") : String(localized: "TIEBREAK"))
                                                 Spacer()
                                             }
-                                        }
-                                    }
-                                } header: {
-                                    switch game.title {
-                                    case .tiebreak(let isSuper):
-                                        HStack {
-                                            Spacer()
-                                            Text(isSuper ? String(localized: "Super tiebreak") : String(localized: "TIEBREAK"))
-                                            Spacer()
-                                        }
-                                    case .servingPlayer(let servedPlayer):
-                                        if let servedPlayer {
-                                            HStack {
-                                                if servedPlayer.alignment == .right {
-                                                    Spacer()
+                                        case .servingPlayer(let servedPlayer):
+                                            if let servedPlayer {
+                                                HStack {
+                                                    if servedPlayer.alignment == .right {
+                                                        Spacer()
+                                                    }
+                                                    Label(servedPlayer.playerName, systemImage: "tennisball.fill")
+                                                        .environment(\.layoutDirection, servedPlayer.alignment == .right ? .rightToLeft : .leftToRight)
+                                                    if servedPlayer.alignment == .left {
+                                                        Spacer()
+                                                    }
                                                 }
-                                                Label(servedPlayer.playerName, systemImage: "tennisball.fill")
-                                                    .environment(\.layoutDirection, servedPlayer.alignment == .right ? .rightToLeft : .leftToRight)
-                                                if servedPlayer.alignment == .left {
-                                                    Spacer()
-                                                }
+                                            } else {
+                                                Text("")
                                             }
-                                        } else {
-                                            Text("")
                                         }
                                     }
+                                    .listRowSeparator(.hidden)
                                 }
-                                .listRowSeparator(.hidden)
                             }
+                            .scrollIndicators(.hidden)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .allowsHitTesting(section.id == selectedTabIndex)
+                            .accessibilityHidden(section.id != selectedTabIndex)
                         }
-                        .tag(section.id)
-                        .scrollIndicators(.hidden)
                     }
+                    // Move the whole strip so outgoing and incoming pages travel together.
+                    .offset(x: -CGFloat(selectedTabIndex) * geometry.size.width)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: selectedTabIndex)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Keep scrolling rows above the fixed team and score footer.
+                .clipped()
+                if let (left, right) = setScore(forIndex: selectedTabIndex) {
+                    Divider()
+                    HStack(spacing: 12) {
+                        Text(viewModel.team1Name)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack(spacing: 0) {
+                            Text(left.value)
+                                .frame(minWidth: scoreWidth)
+                                .foregroundStyle(left.hasWon ? .green : .primary)
+                            Text(":")
+                                .frame(width: separatorWidth)
+                                .foregroundStyle(.secondary)
+                            Text(right.value)
+                                .frame(minWidth: scoreWidth)
+                                .foregroundStyle(right.hasWon ? .green : .primary)
+                        }
+                        .font(.title2.bold())
+                        .monospacedDigit()
+                        Text(viewModel.team2Name)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .ignoresSafeArea(edges: .bottom)
             .background(Color(UIColor.systemGroupedBackground))
-            .tabViewStyle(.page(indexDisplayMode: .never))
             .onChange(of: viewModel.sections.count) { _, count in
                 selectedTabIndex = min(selectedTabIndex, max(0, count - 1))
             }
@@ -372,6 +384,32 @@ struct ScoreHistoryView: View {
             }
             .navigationTitle("Game log")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        guard hasPreviousSet else { return }
+                        selectedTabIndex -= 1
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .foregroundStyle(hasPreviousSet ? Color.accentColor : Color.gray)
+                    }
+                    .disabled(!hasPreviousSet)
+                    .accessibilityLabel("Previous set")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        guard hasNextSet else { return }
+                        selectedTabIndex += 1
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(hasNextSet ? Color.accentColor : Color.gray)
+                    }
+                    .disabled(!hasNextSet)
+                    .accessibilityLabel("Next set")
+                }
+            }
+            .toolbarBackground(Color(UIColor.systemGroupedBackground), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 }

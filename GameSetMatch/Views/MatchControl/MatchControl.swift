@@ -97,6 +97,7 @@ struct MatchControl: View {
             }
             .sheet(isPresented: $showMatchLog) {
                 ScoreHistoryView(matchService: matchService)
+                    .modifier(SideChangeNotification(event: matchService.sideChangeEvent))
             }
 
             .onRotate { newOrientation in
