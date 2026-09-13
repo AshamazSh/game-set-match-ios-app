@@ -9,7 +9,7 @@ final class GameSetMatchUITests: XCTestCase {
         app.launch()
         let format = app.buttons["matchFormat"]
         XCTAssertTrue(format.waitForExistence(timeout: 5))
-        XCTAssertTrue(format.label.contains("1×1"), format.debugDescription)
+        XCTAssertTrue(format.label.contains("2×2"), format.debugDescription)
         XCTAssertTrue(app.buttons["matchSets"].label.contains("3"), app.buttons["matchSets"].debugDescription)
         XCTAssertTrue(app.buttons["deuceRule"].label.contains("Star point"), app.buttons["deuceRule"].debugDescription)
         XCTAssertTrue(app.buttons["decidingSet"].label.contains("Normal set"), app.buttons["decidingSet"].debugDescription)

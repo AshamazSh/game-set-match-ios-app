@@ -293,7 +293,7 @@ final class GameSetMatchTests: XCTestCase {
 
     @MainActor func testNewConfigurationDefaultsAndIndependentOptions() {
         let rules = CustomRule()
-        XCTAssertEqual(rules.configuration.format, .singles)
+        XCTAssertEqual(rules.configuration.format, .doubles)
         XCTAssertEqual(rules.configuration.sets, 3)
         XCTAssertEqual(rules.configuration.deuceRule, .star)
         XCTAssertFalse(rules.configuration.superTieBreak)
@@ -592,7 +592,7 @@ final class GameSetMatchTests: XCTestCase {
     }
 
     func testConfigurationIgnoresRetiredNotificationSetting() throws {
-        let old = Data(#"{"format":"singles","sets":3,"superTieBreak":false,"deuceRule":"star","notifySideChanges":false}"#.utf8)
+        let old = Data(#"{"format":"doubles","sets":3,"superTieBreak":false,"deuceRule":"star","notifySideChanges":false}"#.utf8)
         XCTAssertEqual(try JSONDecoder().decode(MatchConfiguration.self, from: old), MatchConfiguration())
         let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(MatchConfiguration())) as! [String: Any]
         XCTAssertNil(object["notifySideChanges"])

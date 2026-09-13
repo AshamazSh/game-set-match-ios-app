@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03F3D3485EBB462280AAFA60 /* GameSetMatch/Views/MatchControl/ScoreHistory/MatchStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCB7E4C18204A9F91B4AD80 /* GameSetMatch/Views/MatchControl/ScoreHistory/MatchStatisticsView.swift */; };
+		0434DDB68DAF4A99A22BB651 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */; };
+		047777BC3FF84D1F999ED817 /* GameSetMatch/Views/FirstServeTeamButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6089664BD3BB4B38AE71B51D /* GameSetMatch/Views/FirstServeTeamButton.swift */; };
+		3A37BAC74DCA458A8371FEF8 /* GameSetMatch/Views/SideChangeNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE18C5EE014E6D80C917D6 /* GameSetMatch/Views/SideChangeNotification.swift */; };
 		5E4282782B99E0D600455090 /* CreateMatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4282772B99E0D600455090 /* CreateMatchView.swift */; };
 		5E42827B2B99E52D00455090 /* MatchControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E42827A2B99E52D00455090 /* MatchControl.swift */; };
 		5E42827E2B9A2A7300455090 /* DeviceRotationViewModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E42827D2B9A2A7300455090 /* DeviceRotationViewModifier.swift */; };
@@ -68,18 +72,14 @@
 		5EA146CE2BA4FF59004B5BF3 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */; };
 		5EA146DD2BA87AC6004B5BF3 /* ViewConditionalModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA146DC2BA87AC6004B5BF3 /* ViewConditionalModifier.swift */; };
 		7A2B7AB621B751E45EEFA163 /* Pods_GameSetMatchTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 267258997C43986F011F3191 /* Pods_GameSetMatchTests.framework */; };
+		822E0B401F7446D383F74C00 /* GameSetMatch/Views/FirstServeTeamButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6089664BD3BB4B38AE71B51D /* GameSetMatch/Views/FirstServeTeamButton.swift */; };
 		853F80F7F936471E617E08E2 /* Pods_GameSetMatch.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBCA23E367F47075F35D6593 /* Pods_GameSetMatch.framework */; };
+		8F0F64F960E340A99068C081 /* GameSetMatch/Services/Domain/CustomRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8FD3DC0978469FAA650281 /* GameSetMatch/Services/Domain/CustomRule.swift */; };
 		A9F5441210D620EDC9DD223C /* Pods_GameSetMatch_GameSetMatchUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BD58E090ED11067829685DBD /* Pods_GameSetMatch_GameSetMatchUITests.framework */; };
+		B3692E0354C240539815C374 /* GameSetMatch/Views/SideChangeNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE18C5EE014E6D80C917D6 /* GameSetMatch/Views/SideChangeNotification.swift */; };
+		D059B3F93F364732887493B1 /* GameSetMatch/Services/Domain/MatchStatistics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108716B4D4664D268D73333D /* GameSetMatch/Services/Domain/MatchStatistics.swift */; };
 		DC2ECE10535E0617B89305C2 /* libPods-GameSetMatchWatch Watch App.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 45F911C311B9793C5F8E21FD /* libPods-GameSetMatchWatch Watch App.a */; };
-		8F0F64F960E340A99068C081 /* CustomRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8FD3DC0978469FAA650281 /* CustomRule.swift */; };
-		F9923527F3594420BAF4B029 /* MatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82244A6AC51E4102BCDA5257 /* MatchEngine.swift */; };
-		0434DDB68DAF4A99A22BB651 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */; };
-		3A37BAC74DCA458A8371FEF8 /* SideChangeNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE18C5EE014E6D80C917D6; };
-		B3692E0354C240539815C374 /* SideChangeNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BE18C5EE014E6D80C917D6; };
-		D059B3F93F364732887493B1 /* MatchStatistics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108716B4D4664D268D73333D; };
-		03F3D3485EBB462280AAFA60 /* MatchStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCB7E4C18204A9F91B4AD80; };
-		047777BC3FF84D1F999ED817 /* FirstServeTeamButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6089664BD3BB4B38AE71B51D; };
-		822E0B401F7446D383F74C00 /* FirstServeTeamButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6089664BD3BB4B38AE71B51D; };
+		F9923527F3594420BAF4B029 /* GameSetMatch/Services/Domain/MatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82244A6AC51E4102BCDA5257 /* GameSetMatch/Services/Domain/MatchEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -155,7 +155,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		108716B4D4664D268D73333D /* GameSetMatch/Services/Domain/MatchStatistics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Services/Domain/MatchStatistics.swift; sourceTree = SOURCE_ROOT; };
 		267258997C43986F011F3191 /* Pods_GameSetMatchTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_GameSetMatchTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		28B8ECE5964642BE9494DEB1 /* GameSetMatchV5.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV5.xcdatamodel; sourceTree = "<group>"; };
 		45F911C311B9793C5F8E21FD /* libPods-GameSetMatchWatch Watch App.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-GameSetMatchWatch Watch App.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4686D06155E73343DD7533FD /* Pods-GameSetMatch-GameSetMatchUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatch-GameSetMatchUITests.debug.xcconfig"; path = "Target Support Files/Pods-GameSetMatch-GameSetMatchUITests/Pods-GameSetMatch-GameSetMatchUITests.debug.xcconfig"; sourceTree = "<group>"; };
 		54AAB741F8EA084C2379DDCE /* Pods-GameSetMatch.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatch.debug.xcconfig"; path = "Target Support Files/Pods-GameSetMatch/Pods-GameSetMatch.debug.xcconfig"; sourceTree = "<group>"; };
@@ -225,24 +227,22 @@
 		5EA146212B9F9C2F004B5BF3 /* TeamSetsScoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamSetsScoreView.swift; sourceTree = "<group>"; };
 		5EA146C52BA4EAA8004B5BF3 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		5EA146DC2BA87AC6004B5BF3 /* ViewConditionalModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewConditionalModifier.swift; sourceTree = "<group>"; };
+		6089664BD3BB4B38AE71B51D /* GameSetMatch/Views/FirstServeTeamButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Views/FirstServeTeamButton.swift; sourceTree = SOURCE_ROOT; };
+		64200FB11A0F4ADBA35E0073 /* GameSetMatchV3.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV3.xcdatamodel; sourceTree = "<group>"; };
 		6E1B1DBC001F02D1AC31DDAB /* Pods-GameSetMatch-GameSetMatchUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatch-GameSetMatchUITests.release.xcconfig"; path = "Target Support Files/Pods-GameSetMatch-GameSetMatchUITests/Pods-GameSetMatch-GameSetMatchUITests.release.xcconfig"; sourceTree = "<group>"; };
 		776A92110C6A0218F7F706A8 /* Pods-GameSetMatchWatch Watch App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatchWatch Watch App.debug.xcconfig"; path = "Target Support Files/Pods-GameSetMatchWatch Watch App/Pods-GameSetMatchWatch Watch App.debug.xcconfig"; sourceTree = "<group>"; };
+		82244A6AC51E4102BCDA5257 /* GameSetMatch/Services/Domain/MatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Services/Domain/MatchEngine.swift; sourceTree = SOURCE_ROOT; };
+		8E3D3A0BB6094D4AB2E2811D /* GameSetMatchV4.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV4.xcdatamodel; sourceTree = "<group>"; };
+		9366C0709F3947A196356714 /* GameSetMatchV2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV2.xcdatamodel; sourceTree = "<group>"; };
 		9C325901456ED2D639BAFF5E /* Pods-GameSetMatch.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatch.release.xcconfig"; path = "Target Support Files/Pods-GameSetMatch/Pods-GameSetMatch.release.xcconfig"; sourceTree = "<group>"; };
+		B4BE18C5EE014E6D80C917D6 /* GameSetMatch/Views/SideChangeNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Views/SideChangeNotification.swift; sourceTree = SOURCE_ROOT; };
 		B8CCA6AC06FAB0760A30B292 /* Pods-GameSetMatchTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatchTests.debug.xcconfig"; path = "Target Support Files/Pods-GameSetMatchTests/Pods-GameSetMatchTests.debug.xcconfig"; sourceTree = "<group>"; };
 		BD58E090ED11067829685DBD /* Pods_GameSetMatch_GameSetMatchUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_GameSetMatch_GameSetMatchUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		BFCB7E4C18204A9F91B4AD80 /* GameSetMatch/Views/MatchControl/ScoreHistory/MatchStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Views/MatchControl/ScoreHistory/MatchStatisticsView.swift; sourceTree = SOURCE_ROOT; };
 		C2120F4B4CF352D623B47E3A /* Pods-GameSetMatchTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatchTests.release.xcconfig"; path = "Target Support Files/Pods-GameSetMatchTests/Pods-GameSetMatchTests.release.xcconfig"; sourceTree = "<group>"; };
 		D7E0E4DE9F454789A957818E /* Pods-GameSetMatchWatch Watch App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GameSetMatchWatch Watch App.release.xcconfig"; path = "Target Support Files/Pods-GameSetMatchWatch Watch App/Pods-GameSetMatchWatch Watch App.release.xcconfig"; sourceTree = "<group>"; };
 		DBCA23E367F47075F35D6593 /* Pods_GameSetMatch.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_GameSetMatch.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		DF8FD3DC0978469FAA650281 /* CustomRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameSetMatch/Services/Domain/CustomRule.swift"; sourceTree = SOURCE_ROOT; };
-		82244A6AC51E4102BCDA5257 /* MatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GameSetMatch/Services/Domain/MatchEngine.swift"; sourceTree = SOURCE_ROOT; };
-		9366C0709F3947A196356714 /* GameSetMatchV2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV2.xcdatamodel; sourceTree = "<group>"; };
-		64200FB11A0F4ADBA35E0073 /* GameSetMatchV3.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV3.xcdatamodel; sourceTree = "<group>"; };
-		8E3D3A0BB6094D4AB2E2811D /* GameSetMatchV4.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV4.xcdatamodel; sourceTree = "<group>"; };
-		B4BE18C5EE014E6D80C917D6 /* SideChangeNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Views/SideChangeNotification.swift; sourceTree = SOURCE_ROOT; };
-		108716B4D4664D268D73333D /* MatchStatistics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Services/Domain/MatchStatistics.swift; sourceTree = SOURCE_ROOT; };
-		BFCB7E4C18204A9F91B4AD80 /* MatchStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Views/MatchControl/ScoreHistory/MatchStatisticsView.swift; sourceTree = SOURCE_ROOT; };
-		28B8ECE5964642BE9494DEB1 /* GameSetMatchV5.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = GameSetMatchV5.xcdatamodel; sourceTree = "<group>"; };
-		6089664BD3BB4B38AE71B51D /* FirstServeTeamButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Views/FirstServeTeamButton.swift; sourceTree = SOURCE_ROOT; };
+		DF8FD3DC0978469FAA650281 /* GameSetMatch/Services/Domain/CustomRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSetMatch/Services/Domain/CustomRule.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -461,12 +461,12 @@
 				5E56272C2B9B415A00676D36 /* Enums.swift */,
 				5E56272A2B9B414000676D36 /* MatchPlayer.swift */,
 				5E5627282B9B411B00676D36 /* MatchState.swift */,
-				6089664BD3BB4B38AE71B51D /* FirstServeTeamButton.swift */,
-				BFCB7E4C18204A9F91B4AD80 /* MatchStatisticsView.swift */,
-				108716B4D4664D268D73333D /* MatchStatistics.swift */,
-				B4BE18C5EE014E6D80C917D6 /* SideChangeNotification.swift */,
-				82244A6AC51E4102BCDA5257 /* MatchEngine.swift */,
-				DF8FD3DC0978469FAA650281 /* CustomRule.swift */,
+				6089664BD3BB4B38AE71B51D /* GameSetMatch/Views/FirstServeTeamButton.swift */,
+				BFCB7E4C18204A9F91B4AD80 /* GameSetMatch/Views/MatchControl/ScoreHistory/MatchStatisticsView.swift */,
+				108716B4D4664D268D73333D /* GameSetMatch/Services/Domain/MatchStatistics.swift */,
+				B4BE18C5EE014E6D80C917D6 /* GameSetMatch/Views/SideChangeNotification.swift */,
+				82244A6AC51E4102BCDA5257 /* GameSetMatch/Services/Domain/MatchEngine.swift */,
+				DF8FD3DC0978469FAA650281 /* GameSetMatch/Services/Domain/CustomRule.swift */,
 			);
 			path = Domain;
 			sourceTree = "<group>";
@@ -954,12 +954,12 @@
 				5EA1461D2B9F7CE9004B5BF3 /* MatchesHistoryView.swift in Sources */,
 				5E56272B2B9B414000676D36 /* MatchPlayer.swift in Sources */,
 				5E48C45E2B962C1E003A44E8 /* MatchService.swift in Sources */,
-				047777BC3FF84D1F999ED817 /* FirstServeTeamButton.swift in Sources */,
-				03F3D3485EBB462280AAFA60 /* MatchStatisticsView.swift in Sources */,
-				D059B3F93F364732887493B1 /* MatchStatistics.swift in Sources */,
-				3A37BAC74DCA458A8371FEF8 /* SideChangeNotification.swift in Sources */,
-				F9923527F3594420BAF4B029 /* MatchEngine.swift in Sources */,
-				8F0F64F960E340A99068C081 /* CustomRule.swift in Sources */,
+				047777BC3FF84D1F999ED817 /* GameSetMatch/Views/FirstServeTeamButton.swift in Sources */,
+				03F3D3485EBB462280AAFA60 /* GameSetMatch/Views/MatchControl/ScoreHistory/MatchStatisticsView.swift in Sources */,
+				D059B3F93F364732887493B1 /* GameSetMatch/Services/Domain/MatchStatistics.swift in Sources */,
+				3A37BAC74DCA458A8371FEF8 /* GameSetMatch/Views/SideChangeNotification.swift in Sources */,
+				F9923527F3594420BAF4B029 /* GameSetMatch/Services/Domain/MatchEngine.swift in Sources */,
+				8F0F64F960E340A99068C081 /* GameSetMatch/Services/Domain/CustomRule.swift in Sources */,
 				5E48C48C2B9640AA003A44E8 /* MatchSet+CoreDataClass.swift in Sources */,
 				5E48C48D2B9640AA003A44E8 /* MatchSet+CoreDataProperties.swift in Sources */,
 				5E5627292B9B411B00676D36 /* MatchState.swift in Sources */,
@@ -1009,8 +1009,8 @@
 				5EA146202B9F9C13004B5BF3 /* TeamScoreView.swift in Sources */,
 				5EA146222B9F9C2F004B5BF3 /* TeamSetsScoreView.swift in Sources */,
 				5E5627342B9B638900676D36 /* WatchConnectivityManager.swift in Sources */,
-				822E0B401F7446D383F74C00 /* FirstServeTeamButton.swift in Sources */,
-				B3692E0354C240539815C374 /* SideChangeNotification.swift in Sources */,
+				822E0B401F7446D383F74C00 /* GameSetMatch/Views/FirstServeTeamButton.swift in Sources */,
+				B3692E0354C240539815C374 /* GameSetMatch/Views/SideChangeNotification.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1194,7 +1194,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GameSetMatch/GameSetMatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"GameSetMatch/Preview Content\"";
 				DEVELOPMENT_TEAM = D9E562H7JV;
 				ENABLE_PREVIEWS = YES;
@@ -1211,7 +1211,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ashamazsh.game.set.match;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1231,7 +1231,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = GameSetMatch/GameSetMatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"GameSetMatch/Preview Content\"";
 				DEVELOPMENT_TEAM = D9E562H7JV;
 				ENABLE_PREVIEWS = YES;
@@ -1248,7 +1248,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ashamazsh.game.set.match;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

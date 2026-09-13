@@ -1,54 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "The first serving team has already been selected." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The first serving team has already been selected."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Первая подающая команда уже выбрана."
-          }
-        }
-      }
-    },
-    "Choose the first serving team on your iPhone or Watch before scoring." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose the first serving team on your iPhone or Watch before scoring."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перед началом счёта выберите первую подающую команду на iPhone или часах."
-          }
-        }
-      }
-    },
-    "Team %lld serves first" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Team %lld serves first"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Первая подаёт команда %lld"
-          }
-        }
-      }
-    },
     "" : {
 
     },
@@ -78,17 +30,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "|"
-          }
-        }
-      }
-    },
-    "40" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "40"
           }
         }
       }
@@ -224,6 +165,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выберите нечётное число сетов от 1 до 9."
+          }
+        }
+      }
+    },
+    "Choose the first serving team on your iPhone or Watch before scoring." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the first serving team on your iPhone or Watch before scoring."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перед началом счёта выберите первую подающую команду на iPhone или часах."
           }
         }
       }
@@ -364,17 +321,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Игра"
-          }
-        }
-      }
-    },
-    "Game log" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Лог игры"
           }
         }
       }
@@ -605,28 +551,6 @@
         }
       }
     },
-    "Played on 6:6" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "При счете 6:6"
-          }
-        }
-      }
-    },
-    "Played on 40:40" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "При счете 40:40"
-          }
-        }
-      }
-    },
     "Player 1" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -710,17 +634,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выход"
-          }
-        }
-      }
-    },
-    "Rules" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Правила"
           }
         }
       }
@@ -856,6 +769,22 @@
         }
       }
     },
+    "Team %lld serves first" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Team %lld serves first"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Первая подаёт команда %lld"
+          }
+        }
+      }
+    },
     "Team 1" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -912,6 +841,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Теннис 2х2"
+          }
+        }
+      }
+    },
+    "The first serving team has already been selected." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The first serving team has already been selected."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Первая подающая команда уже выбрана."
           }
         }
       }
