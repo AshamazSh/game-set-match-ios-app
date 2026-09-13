@@ -108,6 +108,7 @@ enum MatchFormat: String, CaseIterable, Codable, Identifiable {
 enum DeuceRule: String, CaseIterable, Codable, Identifiable {
     case star, golden, advantage
     var id: Self { self }
+    var decidingPointScore: String { self == .star ? "SP" : "40" }
     var title: String {
         switch self {
         case .star: return "Star point"

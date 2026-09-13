@@ -160,6 +160,10 @@ final class MatchService: ObservableObject {
                 state.isSuperTieBreak = set.isSuperTieBreak
                 state.isGoldenPoint = !game.isTieBreak && MatchEngine.isDecidingPoint(points, rule: coreDataManager.rules(for: match).deuceRule)
                 state.decidingPointRule = state.isGoldenPoint ? coreDataManager.rules(for: match).deuceRule : nil
+                if let rule = state.decidingPointRule {
+                    state.team1.points = rule.decidingPointScore
+                    state.team2.points = rule.decidingPointScore
+                }
                 if match.winner == nil {
                     let server = try coreDataManager.servingPlayer(in: match)
                     if teams[0].players.contains(server) { state.team1.servingPlayer = server.matchPlayer }

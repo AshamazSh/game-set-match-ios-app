@@ -31,6 +31,7 @@
       }
     },
     "40" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ru" : {
           "stringUnit" : {
