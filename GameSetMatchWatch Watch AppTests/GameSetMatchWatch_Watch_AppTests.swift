@@ -87,4 +87,28 @@ final class GameSetMatchWatch_Watch_AppTests: XCTestCase {
         XCTAssertNil(manager.sideChangeEvent)
     }
 
+    @MainActor func testFirstServerSelectionSnapshotsAndLegacyFallback() throws {
+        let manager = WatchConnectivityManager(activate: false)
+        var state = MatchState.empty
+        state.isCompleted = false
+        state.requiresFirstServerSelection = true
+        func packet(_ version: Int) throws -> [String: Any] {
+            ["request": AppRequest.newState.rawValue, "snapshotVersion": version,
+             "object": try JSONSerialization.jsonObject(with: JSONEncoder().encode(state))]
+        }
+        manager.processMessage(try packet(1))
+        XCTAssertTrue(manager.matchState?.isAwaitingFirstServer == true)
+        let pending = try packet(1)
+        state.requiresFirstServerSelection = false
+        state.firstServingTeam = 1
+        manager.processMessage(try packet(2))
+        manager.processMessage(pending)
+        XCTAssertFalse(manager.matchState?.isAwaitingFirstServer == true)
+        XCTAssertEqual(manager.matchState?.firstServingTeam, 1)
+        state.requiresFirstServerSelection = nil
+        state.firstServingTeam = nil
+        manager.processMessage(try packet(3))
+        XCTAssertFalse(manager.matchState?.isAwaitingFirstServer == true)
+    }
+
 }

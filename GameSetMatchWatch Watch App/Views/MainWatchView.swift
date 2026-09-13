@@ -24,8 +24,8 @@ struct MainWatchView: View {
             NavigationView {
                 if !hasConnection {
                     Text("Please back to GameSetMach on your device")
-                } else if let matchState = matchState {
-                    MatchControlWatchView(viewModel: MatchControlWatchViewModel(connectivityManager: connectivityManager, matchState: matchState))
+                } else if matchState != nil {
+                    MatchControlWatchView(connectivityManager: connectivityManager)
                 } else {
                     CreateMatchWatchView(connectivityManager: connectivityManager)
                 }

@@ -23,6 +23,9 @@ struct MatchState: Codable {
         var isMatchWinner: Bool
     }
     
+    var requiresFirstServerSelection: Bool? = nil
+    var firstServingTeam: Int? = nil
+    var isAwaitingFirstServer: Bool { requiresFirstServerSelection == true && !isCompleted }
     var sideChangeEvent: SideChangeEvent? = nil
     var isSuperTieBreak: Bool? = nil
     var decidingPointRule: DeuceRule? = nil

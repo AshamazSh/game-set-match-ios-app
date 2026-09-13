@@ -1,6 +1,54 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "The first serving team has already been selected." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The first serving team has already been selected."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Первая подающая команда уже выбрана."
+          }
+        }
+      }
+    },
+    "Choose the first serving team on your iPhone or Watch before scoring." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the first serving team on your iPhone or Watch before scoring."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перед началом счёта выберите первую подающую команду на iPhone или часах."
+          }
+        }
+      }
+    },
+    "Team %lld serves first" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Team %lld serves first"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Первая подаёт команда %lld"
+          }
+        }
+      }
+    },
     "" : {
 
     },

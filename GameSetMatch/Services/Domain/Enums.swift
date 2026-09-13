@@ -71,6 +71,8 @@ enum AppRequest: String, CaseIterable, Identifiable {
     case undo
     case teamAScored
     case teamBScored
+    case teamAServesFirst
+    case teamBServesFirst
     case endMatch
     
     case newState
@@ -86,6 +88,8 @@ enum AppRequest: String, CaseIterable, Identifiable {
                 .undo,
                 .teamAScored,
                 .teamBScored,
+                .teamAServesFirst,
+                .teamBServesFirst,
                 .endMatch,
                 .currentStatus:
             return true
@@ -126,7 +130,7 @@ enum DeuceRule: String, CaseIterable, Codable, Identifiable {
 }
 
 struct MatchConfiguration: Codable, Equatable {
-    var format: MatchFormat = .singles
+    var format: MatchFormat = .doubles
     var sets: Int32 = 3
     var superTieBreak = false
     var deuceRule: DeuceRule = .star

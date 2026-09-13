@@ -27,20 +27,28 @@ struct MatchControl: View {
         }
     }
     
-    private var teamScore1: TeamScoreView? {
-        guard let matchState else { return nil }
-        return TeamScoreView(viewModel: TeamScoreViewModel(teamInfo: matchState.team1, isGoldenPoint: matchState.isGoldenPoint, onScored: { matchService.pointWonByTeam1() }),
-                             layoutDirection: layoutDirection,
-                             onScreen: .topOrLeading)
+    @ViewBuilder private var teamScore1: some View {
+        if let matchState {
+            if matchState.isAwaitingFirstServer {
+                FirstServeTeamButton(team: matchState.team1, number: 1) { matchService.selectFirstServingTeam(0) }
+            } else {
+                TeamScoreView(viewModel: TeamScoreViewModel(teamInfo: matchState.team1, isGoldenPoint: matchState.isGoldenPoint,
+                    onScored: { matchService.pointWonByTeam1() }), layoutDirection: layoutDirection, onScreen: .topOrLeading)
+            }
+        }
     }
-    
-    private var teamScore2: TeamScoreView? {
-        guard let matchState else { return nil }
-        return TeamScoreView(viewModel: TeamScoreViewModel(teamInfo: matchState.team2, isGoldenPoint: matchState.isGoldenPoint, onScored: { matchService.pointWonByTeam2() }),
-                             layoutDirection: layoutDirection,
-                             onScreen: .bottomOrTrailing)
+
+    @ViewBuilder private var teamScore2: some View {
+        if let matchState {
+            if matchState.isAwaitingFirstServer {
+                FirstServeTeamButton(team: matchState.team2, number: 2) { matchService.selectFirstServingTeam(1) }
+            } else {
+                TeamScoreView(viewModel: TeamScoreViewModel(teamInfo: matchState.team2, isGoldenPoint: matchState.isGoldenPoint,
+                    onScored: { matchService.pointWonByTeam2() }), layoutDirection: layoutDirection, onScreen: .bottomOrTrailing)
+            }
+        }
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -67,7 +75,7 @@ struct MatchControl: View {
                 }
                 if let match = matchService.match {
                     ToolbarItem(placement: .topBarLeading) {
-                        undoButton
+                        undoButton.disabled(matchState?.isAwaitingFirstServer == true)
                     }
                     if match.winner != nil {
                         ToolbarItem(placement: .topBarLeading) {
@@ -84,6 +92,7 @@ struct MatchControl: View {
                         Image(systemName: "list.bullet.clipboard")
                     }
                     .accessibilityIdentifier("matchDetails")
+                    .disabled(matchState?.isAwaitingFirstServer == true)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

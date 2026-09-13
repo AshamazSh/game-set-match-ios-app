@@ -81,6 +81,10 @@ final class MatchService: ObservableObject {
             match = try coreDataManager.createMatch(type,
                 players1: type == .tennis ? [.playerOne] : [.playerOne, .playerOneB],
                 players2: type == .tennis ? [.playerTwo] : [.playerTwo, .playerTwoB])
+        case .teamAServesFirst, .teamBServesFirst:
+            guard let match else { throw CommandError.staleState }
+            try coreDataManager.selectFirstServingTeam(in: match, teamIndex: command.action == .teamAServesFirst ? 0 : 1)
+            refresh()
         case .teamAScored, .teamBScored:
             guard let match, match.winner == nil else { throw CommandError.staleState }
             let changeSides = try coreDataManager.awardPoint(in: match, to: command.action == .teamAScored ? 0 : 1)
@@ -92,6 +96,14 @@ final class MatchService: ObservableObject {
         case .endMatch: closeMatch()
         case .currentStatus: break
         default: throw CommandError.invalidRequest
+        }
+    }
+
+    func selectFirstServingTeam(_ teamIndex: Int) {
+        guard let match else { return }
+        perform {
+            try coreDataManager.selectFirstServingTeam(in: match, teamIndex: teamIndex)
+            refresh()
         }
     }
 
@@ -143,6 +155,8 @@ final class MatchService: ObservableObject {
                 let event = SideChangeEvent()
                 state.sideChangeEvent = event
             }
+            state.requiresFirstServerSelection = match.requiresFirstServerSelection
+            state.firstServingTeam = Int(match.firstServingTeam)
             state.matchID = match.id
             state.revision = match.revision
             for set in match.sets.allObjectsOfType(MatchSet.self) {
@@ -164,7 +178,7 @@ final class MatchService: ObservableObject {
                     state.team1.points = rule.decidingPointScore
                     state.team2.points = rule.decidingPointScore
                 }
-                if match.winner == nil {
+                if match.winner == nil && !match.requiresFirstServerSelection {
                     let server = try coreDataManager.servingPlayer(in: match)
                     if teams[0].players.contains(server) { state.team1.servingPlayer = server.matchPlayer }
                     else { state.team2.servingPlayer = server.matchPlayer }

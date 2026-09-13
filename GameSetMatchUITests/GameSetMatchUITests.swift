@@ -37,6 +37,8 @@ final class GameSetMatchUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["At 40:40, the next point wins the game."].exists)
         app.buttons["Create"].tap()
         XCTAssertFalse(app.alerts.firstMatch.exists)
+        XCTAssertTrue(app.buttons["firstServeTeam1"].waitForExistence(timeout: 5))
+        app.buttons["firstServeTeam1"].tap()
         XCTAssertTrue(app.buttons["0"].firstMatch.waitForExistence(timeout: 5))
     }
     private func statisticsApp(finished: Bool = false, doubles: Bool = false) -> XCUIApplication {

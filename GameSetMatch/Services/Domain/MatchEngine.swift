@@ -74,9 +74,11 @@ enum MatchEngine {
     }
 
     /// A tiebreak counts as one service game when continuing into the next set.
-    static func servingPlayer(completedGames: Int, tieBreakPoints: Int? = nil) -> ServingPlayer {
+    static func servingPlayer(completedGames: Int, tieBreakPoints: Int? = nil, firstServingTeam: Int = 0) -> ServingPlayer {
         let offset = tieBreakPoints.map { ($0 + 1) / 2 } ?? 0
-        return ServingPlayer(rawValue: (completedGames + offset) % 4) ?? .t1p1
+        let position = (completedGames + offset) % 4
+        // Swap teams, preserving each team's player order (B1, A1, B2, A2).
+        return ServingPlayer(rawValue: firstServingTeam == 1 ? position ^ 1 : position) ?? .t1p1
     }
 
     static func displayPoints(_ score: Score, isTieBreak: Bool) -> (String, String) {

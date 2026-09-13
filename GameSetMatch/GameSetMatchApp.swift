@@ -28,6 +28,7 @@ final class AppDependencies: ObservableObject {
                     configuration: MatchConfiguration(format: doubles ? .doubles : .singles),
                     players1: doubles ? [.playerOne, .playerOneB] : [.playerOne],
                     players2: doubles ? [.playerTwo, .playerTwoB] : [.playerTwo])
+                try repository.selectFirstServingTeam(in: match, teamIndex: 0)
                 let finished = ProcessInfo.processInfo.arguments.contains("--ui-statistics-finished")
                 // Seed through normal scoring in the isolated in-memory store.
                 for _ in 0..<(finished ? 48 : 24) { try repository.awardPoint(in: match, to: 0) }

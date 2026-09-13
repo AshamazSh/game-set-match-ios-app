@@ -34,12 +34,13 @@ private final class Harness {
         service = MatchService(context: context, coreDataManager: repository, connectivityManager: transport, defaults: defaults)
     }
 
-    func create(bestOf: Int32 = 1, golden: Bool = false, doubles: Bool = false, deuce: DeuceRule? = nil, superTieBreak: Bool = false) throws -> Match {
+    func create(bestOf: Int32 = 1, golden: Bool = false, doubles: Bool = false, deuce: DeuceRule? = nil, superTieBreak: Bool = false, chooseFirstServer: Bool = true) throws -> Match {
         let match = try repository.createMatch(
             configuration: MatchConfiguration(format: doubles ? .doubles : .singles, sets: bestOf,
                 superTieBreak: superTieBreak, deuceRule: deuce ?? (golden ? .golden : .advantage)),
             players1: doubles ? [.playerOne, .playerOneB] : [.playerOne],
             players2: doubles ? [.playerTwo, .playerTwoB] : [.playerTwo])
+        if chooseFirstServer { try repository.selectFirstServingTeam(in: match, teamIndex: 0) }
         service.match = match
         return match
     }
@@ -209,7 +210,7 @@ final class GameSetMatchTests: XCTestCase {
         XCTAssertNil(status["error"])
         XCTAssertNil(duplicate["error"])
         XCTAssertEqual(h.service.matchState?.team1.points, "15")
-        XCTAssertEqual(h.service.match?.revision, 1)
+        XCTAssertEqual(h.service.match?.revision, 2)
         XCTAssertEqual(try h.context.count(for: GamePoint.fetchRequest()), 1)
     }
 
@@ -243,7 +244,7 @@ final class GameSetMatchTests: XCTestCase {
         var response: [String: Any] = [:]
         transport.receive(command) { response = $0 }
         XCTAssertNotNil(response["error"])
-        XCTAssertEqual(match.revision, 1)
+        XCTAssertEqual(match.revision, 2)
     }
 
     @MainActor func testCloseThenCreateFromWatchAndRejectOldMatchCommand() throws {
@@ -485,8 +486,8 @@ final class GameSetMatchTests: XCTestCase {
         XCTAssertNil(h.service.match)
     }
 
-    @MainActor func testMigrationV1V2V3PreservesPlayableLegacyDeuceRules() throws {
-        for version in ["GameSetMatch", "GameSetMatchV2", "GameSetMatchV3"] {
+    @MainActor func testMigrationV1V2V3V4PreservesPlayableLegacyDeuceRules() throws {
+        for version in ["GameSetMatch", "GameSetMatchV2", "GameSetMatchV3", "GameSetMatchV4"] {
             for golden in [false, true] {
                 try verifyLegacyMigration(version: version, golden: golden)
             }
@@ -514,7 +515,7 @@ final class GameSetMatchTests: XCTestCase {
         rule.duration = 7
         rule.tieBreak = SetTieBreak.firstToSix.rawValue
         rule.gameTieBreak = (golden ? GameTieBreak.goldenRule : .fullTieBreak).rawValue
-        if version == "GameSetMatchV3" {
+        if ["GameSetMatchV3", "GameSetMatchV4"].contains(version) {
             rule.formatCode = MatchFormat.singles.rawValue
             rule.deuceRuleCode = (golden ? DeuceRule.golden : .advantage).rawValue
             rule.superTieBreak = true
@@ -547,12 +548,14 @@ final class GameSetMatchTests: XCTestCase {
         let restored = try XCTUnwrap(repository.match(byId: "legacy"))
         XCTAssertEqual(restored.createdAt, Date(timeIntervalSince1970: 1_700_000_000))
         XCTAssertEqual(try context.count(for: GamePoint.fetchRequest()), 6)
-        XCTAssertEqual(restored.rule.deuceRuleCode, version == "GameSetMatchV3" ? (golden ? DeuceRule.golden : .advantage).rawValue : nil)
-        XCTAssertEqual(restored.rule.formatCode, version == "GameSetMatchV3" ? MatchFormat.singles.rawValue : nil)
+        XCTAssertEqual(restored.rule.deuceRuleCode, ["GameSetMatchV3", "GameSetMatchV4"].contains(version) ? (golden ? DeuceRule.golden : .advantage).rawValue : nil)
+        XCTAssertEqual(restored.rule.formatCode, ["GameSetMatchV3", "GameSetMatchV4"].contains(version) ? MatchFormat.singles.rawValue : nil)
+        XCTAssertFalse(restored.requiresFirstServerSelection)
+        XCTAssertEqual(restored.firstServingTeam, 0)
         XCTAssertFalse(restored.rule.notifySideChanges)
-        XCTAssertEqual(restored.rule.superTieBreak, version == "GameSetMatchV3")
+        XCTAssertEqual(restored.rule.superTieBreak, ["GameSetMatchV3", "GameSetMatchV4"].contains(version))
         XCTAssertFalse((restored.sets.firstObject as! MatchSet).isSuperTieBreak)
-        let expected = MatchRules(bestOf: 7, deuceRule: golden ? .golden : .advantage, superTieBreak: version == "GameSetMatchV3", tieBreak: false)
+        let expected = MatchRules(bestOf: 7, deuceRule: golden ? .golden : .advantage, superTieBreak: ["GameSetMatchV3", "GameSetMatchV4"].contains(version), tieBreak: false)
         XCTAssertEqual(repository.rules(for: restored), expected)
         let migratedStats = MatchStatisticsCalculator.pages(for: restored, rules: expected)
         XCTAssertEqual(migratedStats[0].teams[0][.serve], StatisticCount(won: 3, total: 6))
@@ -614,6 +617,7 @@ final class GameSetMatchTests: XCTestCase {
         for _ in 0..<4 { h.service.pointWonByTeam1(); XCTAssertNil(h.service.sideChangeEvent) }
         let replay = try h.repository.replayMatch(match)
         h.service.match = replay
+        h.service.selectFirstServingTeam(0)
         for _ in 0..<4 { h.service.pointWonByTeam1() }
         XCTAssertNotNil(h.service.sideChangeEvent)
     }
@@ -824,5 +828,78 @@ final class MatchStatisticsTests: XCTestCase {
         h.service.undoLastPoint()
         XCTAssertEqual(history.statistics.map(\.id), [0, 1, 2])
         XCTAssertEqual(history.statistics[0].teams[1][.miniBreaks], StatisticCount())
+    }
+}
+
+
+final class FirstServingTeamTests: XCTestCase {
+    func testSecondTeamStartsWithItsFirstPlayerAndKeepsPlayerOrder() {
+        XCTAssertEqual((0..<8).map { MatchEngine.servingPlayer(completedGames: $0, firstServingTeam: 1) },
+            [.t2p1, .t1p1, .t2p2, .t1p2, .t2p1, .t1p1, .t2p2, .t1p2])
+        XCTAssertEqual((0..<7).map { MatchEngine.servingPlayer(completedGames: 12, tieBreakPoints: $0, firstServingTeam: 1) },
+            [.t2p1, .t1p1, .t1p1, .t2p2, .t2p2, .t1p2, .t1p2])
+    }
+
+    @MainActor func testSelectionRequiredBeforeScoringAndRecordedServerSurvivesUndo() throws {
+        let h = try Harness(), match = try h.create(doubles: true, chooseFirstServer: false)
+        XCTAssertTrue(h.service.matchState?.isAwaitingFirstServer == true)
+        XCTAssertNil(h.service.matchState?.team1.servingPlayer)
+        XCTAssertNil(h.service.matchState?.team2.servingPlayer)
+        XCTAssertThrowsError(try h.repository.awardPoint(in: match, to: 0))
+        XCTAssertEqual(try h.context.count(for: GamePoint.fetchRequest()), 0)
+        h.service.selectFirstServingTeam(1)
+        let expected = (match.teams[1] as! Team).players[0] as! Player
+        XCTAssertEqual(try h.repository.servingPlayer(in: match), expected)
+        h.service.pointWonByTeam1()
+        let point = try XCTUnwrap((match.sets[0] as? MatchSet)?.games[0] as? Game).points[0] as! GamePoint
+        XCTAssertEqual(point.servedBy, expected)
+        let stats = MatchStatisticsCalculator.pages(for: match, rules: h.repository.rules(for: match))
+        XCTAssertEqual(stats[0].teams[1][.serve], StatisticCount(won: 0, total: 1))
+        h.service.undoLastPoint()
+        XCTAssertFalse(match.requiresFirstServerSelection)
+        XCTAssertEqual(try h.repository.servingPlayer(in: match), expected)
+        XCTAssertThrowsError(try h.repository.selectFirstServingTeam(in: match, teamIndex: 0))
+        let replay = try h.repository.replayMatch(match)
+        XCTAssertTrue(replay.requiresFirstServerSelection)
+    }
+
+    @MainActor func testWatchSelectionRejectsCompetingChoiceAndDuplicateDoesNotChangeIt() throws {
+        let h = try Harness(), match = try h.create(chooseFirstServer: false)
+        let first = h.command(.teamAServesFirst), second = h.command(.teamBServesFirst)
+        XCTAssertNil(h.receive(second)["error"])
+        XCTAssertNotNil(h.receive(first)["error"])
+        XCTAssertNil(h.receive(second)["error"])
+        XCTAssertEqual(match.firstServingTeam, 1)
+        XCTAssertEqual(match.revision, 1)
+        let restored = MatchService(context: h.context, coreDataManager: h.repository,
+            connectivityManager: ConnectivityManager(defaults: h.defaults, activate: false), defaults: h.defaults)
+        XCTAssertFalse(restored.matchState?.isAwaitingFirstServer == true)
+        XCTAssertEqual(restored.matchState?.firstServingTeam, 1)
+    }
+
+    @MainActor func testFailedSelectionRollsBackAndPendingMatchRestores() throws {
+        let h = try Harness(), match = try h.create(chooseFirstServer: false)
+        let command = h.command(.teamBServesFirst)
+        h.context.failSave = true
+        XCTAssertNotNil(h.receive(command)["error"])
+        XCTAssertTrue(match.requiresFirstServerSelection)
+        XCTAssertEqual(match.firstServingTeam, 0)
+        XCTAssertEqual(match.revision, 0)
+        h.context.failSave = false
+        let restored = MatchService(context: h.context, coreDataManager: h.repository,
+            connectivityManager: ConnectivityManager(defaults: h.defaults, activate: false), defaults: h.defaults)
+        XCTAssertTrue(restored.matchState?.isAwaitingFirstServer == true)
+        XCTAssertNil(h.receive(command)["error"])
+        XCTAssertEqual(match.firstServingTeam, 1)
+    }
+
+    func testLegacySnapshotsDoNotRequireSelection() throws {
+        let data = try JSONEncoder().encode(MatchState.empty)
+        var object = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        object["isCompleted"] = false
+        object.removeValue(forKey: "requiresFirstServerSelection")
+        object.removeValue(forKey: "firstServingTeam")
+        let state = try JSONDecoder().decode(MatchState.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertFalse(state.isAwaitingFirstServer)
     }
 }

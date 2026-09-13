@@ -372,6 +372,15 @@ struct ScoreHistoryView: View {
                                                     .frame(width: scoreWidth)
                                                     .multilineTextAlignment(.center)
                                                     .foregroundStyle(left.hasWon ? .green : .primary)
+                                                    .overlay(alignment: .trailing) {
+                                                        if game.isBreak && left.hasWon {
+                                                            Text(verbatim: "Breakpoint!")
+                                                                .font(.caption.weight(.semibold))
+                                                                .foregroundStyle(.green)
+                                                                .fixedSize()
+                                                                .offset(x: -(scoreWidth + 8))
+                                                        }
+                                                    }
                                                 Text(":")
                                                     .font(.title)
                                                     .frame(width: separatorWidth)
@@ -382,7 +391,7 @@ struct ScoreHistoryView: View {
                                                     .multilineTextAlignment(.center)
                                                     .foregroundStyle(right.hasWon ? .green : .primary)
                                                     .overlay(alignment: .leading) {
-                                                        if game.isBreak {
+                                                        if game.isBreak && right.hasWon {
                                                             Text(verbatim: "Breakpoint!")
                                                                 .font(.caption.weight(.semibold))
                                                                 .foregroundStyle(.green)

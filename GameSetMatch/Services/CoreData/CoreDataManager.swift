@@ -4,9 +4,11 @@ import CoreData
 @MainActor
 final class CoreDataManager: ObservableObject {
     enum RepositoryError: LocalizedError {
-        case invalidMatch, invalidRules
+        case invalidMatch, invalidRules, firstServerRequired, firstServerAlreadySelected
         var errorDescription: String? {
             switch self {
+            case .firstServerRequired: return String(localized: "Choose the first serving team on your iPhone or Watch before scoring.")
+            case .firstServerAlreadySelected: return String(localized: "The first serving team has already been selected.")
             case .invalidMatch: return String(localized: "The match data is incomplete.")
             case .invalidRules: return String(localized: "Choose 1, 3 or 5 sets.")
             }
@@ -92,6 +94,8 @@ final class CoreDataManager: ObservableObject {
             let match = Match(entity: NSEntityDescription.entity(forEntityName: "Match", in: context)!, insertInto: context)
             match.id = UUID().uuidString
             match.createdAt = Date()
+            match.requiresFirstServerSelection = true
+            match.firstServingTeam = 0
             match.addToTeams(insertTeam(players1))
             match.addToTeams(insertTeam(players2))
             let rule = Rule(entity: NSEntityDescription.entity(forEntityName: "Rule", in: context)!, insertInto: context)
@@ -129,13 +133,28 @@ final class CoreDataManager: ObservableObject {
                           second: Int32(winners.filter { $0 == teams[1] }.count))
     }
 
+    func selectFirstServingTeam(in match: Match, teamIndex: Int) throws {
+        guard (0...1).contains(teamIndex), match.teams.count == 2 else { throw RepositoryError.invalidMatch }
+        guard match.requiresFirstServerSelection, match.winner == nil,
+              match.sets.allObjectsOfType(MatchSet.self).allSatisfy({ set in
+                  set.games.allObjectsOfType(Game.self).allSatisfy { $0.points.count == 0 }
+              }) else { throw RepositoryError.firstServerAlreadySelected }
+        try transaction {
+            match.firstServingTeam = Int16(teamIndex)
+            match.requiresFirstServerSelection = false
+            match.revision += 1
+        }
+    }
+
     func servingPlayer(in match: Match) throws -> Player {
+        guard !match.requiresFirstServerSelection else { throw RepositoryError.firstServerRequired }
         let teams = match.teams.allObjectsOfType(Team.self)
         guard teams.count == 2 else { throw RepositoryError.invalidMatch }
         let games = match.sets.allObjectsOfType(MatchSet.self).flatMap { $0.games.allObjectsOfType(Game.self) }
         guard let current = games.last else { throw RepositoryError.invalidMatch }
         let server = MatchEngine.servingPlayer(completedGames: games.dropLast().count,
-                                               tieBreakPoints: current.isTieBreak ? current.points.count : nil)
+                                               tieBreakPoints: current.isTieBreak ? current.points.count : nil,
+                                               firstServingTeam: Int(match.firstServingTeam))
         let player = server.team1ServingPlayer(players: teams[0].players.allObjectsOfType(Player.self))
             ?? server.team2ServingPlayer(players: teams[1].players.allObjectsOfType(Player.self))
         guard let player else { throw RepositoryError.invalidMatch }
