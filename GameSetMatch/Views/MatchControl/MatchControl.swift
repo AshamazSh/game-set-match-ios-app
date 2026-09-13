@@ -83,6 +83,7 @@ struct MatchControl: View {
                     } label: {
                         Image(systemName: "list.bullet.clipboard")
                     }
+                    .accessibilityIdentifier("matchDetails")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

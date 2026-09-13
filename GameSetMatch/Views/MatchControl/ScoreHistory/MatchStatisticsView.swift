@@ -33,7 +33,6 @@ struct MatchStatisticsView: View {
             .clipped()
         }
         .background(Color(UIColor.systemGroupedBackground))
-        .accessibilityIdentifier("statsContent")
     }
 
     private func statisticsPage(_ page: MatchStatisticsPage) -> some View {
@@ -85,17 +84,17 @@ private struct StatisticsTable: View {
                 .foregroundStyle(.secondary)
                 ForEach(metrics) { metric in
                     let count = participant[metric]
-                    let comparison = opponent?[metric]
+                    let highlighted = metric.highlightedColumns(for: count, comparedTo: opponent?[metric])
                     GridRow(alignment: .center) {
                         Text(metric.title)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .multilineTextAlignment(.leading)
                         Text(String(count.won))
-                            .foregroundStyle(metric == .breakPoints && count.won > (comparison?.won ?? Int.max) ? Color.green : Color.primary)
+                            .foregroundStyle(highlighted.contains(.won) ? Color.green : Color.primary)
                         Text(String(count.total))
-                            .foregroundStyle(metric == .breakPoints && count.total > (comparison?.total ?? Int.max) ? Color.green : Color.primary)
+                            .foregroundStyle(highlighted.contains(.total) ? Color.green : Color.primary)
                         Text(count.percentage)
-                            .foregroundStyle(metric != .breakPoints && comparison.map { count.hasBetterPercentage(than: $0) } == true ? Color.green : Color.primary)
+                            .foregroundStyle(highlighted.contains(.percentage) ? Color.green : Color.primary)
                     }
                 }
             }

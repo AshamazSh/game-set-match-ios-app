@@ -376,7 +376,8 @@ final class GameSetMatchTests: XCTestCase {
             XCTAssertEqual(h.service.matchState?.isGoldenPoint, round == 4)
         }
         XCTAssertEqual(h.service.matchState?.decidingPointRule, .star)
-        XCTAssertEqual(h.service.matchState?.team1.points, "40")
+        XCTAssertEqual(h.service.matchState?.team1.points, "SP")
+        XCTAssertEqual(h.service.matchState?.team2.points, "SP")
         let history = ScoreHistoryViewModel(matchService: h.service)
         guard case .decidingPoint(.star) = history.sections[0].games[0].scores.last else { return XCTFail("Missing Star point label") }
         h.service.pointWonByTeam2()
@@ -553,6 +554,10 @@ final class GameSetMatchTests: XCTestCase {
         XCTAssertFalse((restored.sets.firstObject as! MatchSet).isSuperTieBreak)
         let expected = MatchRules(bestOf: 7, deuceRule: golden ? .golden : .advantage, superTieBreak: version == "GameSetMatchV3", tieBreak: false)
         XCTAssertEqual(repository.rules(for: restored), expected)
+        let migratedStats = MatchStatisticsCalculator.pages(for: restored, rules: expected)
+        XCTAssertEqual(migratedStats[0].teams[0][.serve], StatisticCount(won: 3, total: 6))
+        XCTAssertEqual(migratedStats[0].teams[0][.deuceGames], StatisticCount())
+        XCTAssertFalse(context.hasChanges)
         XCTAssertEqual(try repository.awardPoint(in: restored, to: 0), golden)
         XCTAssertEqual((restored.sets.firstObject as! MatchSet).games.count, golden ? 2 : 1)
         if !golden { XCTAssertTrue(try repository.awardPoint(in: restored, to: 0)) }
@@ -648,4 +653,176 @@ final class GameSetMatchTests: XCTestCase {
         XCTAssertNotNil(superMatch.winner)
     }
 
+}
+
+final class MatchStatisticsTests: XCTestCase {
+    private func game(_ winners: [Int], server: Int = 0, winner: Int? = nil) -> StatisticsInput.Game {
+        .init(isTieBreak: false, winningTeam: winner, points: winners.map { .init(server: server, winningTeam: $0) })
+    }
+    private func calculate(_ sets: [[StatisticsInput.Game]], rule: DeuceRule = .advantage, doubles: Bool = false) -> [MatchStatisticsPage] {
+        let teams = (0..<2).map { ParticipantStatistics(id: "t\($0)", name: "Team \($0)", team: $0) }
+        let players = doubles
+            ? (0..<4).map { ParticipantStatistics(id: "p\($0)", name: "Player \($0)", team: $0 / 2) }
+            : (0..<2).map { ParticipantStatistics(id: "p\($0)", name: "Player \($0)", team: $0) }
+        return MatchStatisticsCalculator.pages(for: .init(teams: teams, players: players, sets: sets, rules: .init(deuceRule: rule)))
+    }
+
+    func testEmptyHistoryHasZeroCountsAndNoPercentages() {
+        let pages = calculate([[]])
+        XCTAssertEqual(pages.map(\.id), [0, 1])
+        for participant in pages[0].teams + pages[0].players {
+            for metric in MatchStatistic.allCases {
+                XCTAssertEqual(participant[metric], StatisticCount())
+                XCTAssertEqual(participant[metric].percentage, "—")
+            }
+        }
+    }
+
+    func testServiceSidesResetPerGameAndAttributeEachDoublesServer() {
+        let page = calculate([[game([0, 0, 0, 0], server: 0, winner: 0), game([1, 1, 1, 1], server: 1, winner: 1)]], doubles: true)[0]
+        XCTAssertEqual(page.teams[0][.serve], StatisticCount(won: 4, total: 8))
+        XCTAssertEqual(page.teams[0][.serveRight], StatisticCount(won: 2, total: 4))
+        XCTAssertEqual(page.teams[0][.serveLeft], StatisticCount(won: 2, total: 4))
+        XCTAssertEqual(page.players[0][.serve], StatisticCount(won: 4, total: 4))
+        XCTAssertEqual(page.players[1][.serve], StatisticCount(won: 0, total: 4))
+        XCTAssertEqual(page.players[2][.serve], StatisticCount())
+        XCTAssertEqual(page.teams[1][.breakPoints], StatisticCount(won: 1, total: 1))
+        XCTAssertEqual(page.players[2][.breakPoints], StatisticCount())
+    }
+
+    func testSideNumberingRestartsAfterAnOddLengthGame() {
+        let page = calculate([[game([0, 1, 0, 1, 0, 1, 0], winner: 0), game([1], server: 1)]], rule: .golden)[0]
+        XCTAssertEqual(page.teams[1][.serveRight], StatisticCount(won: 1, total: 1))
+        XCTAssertEqual(page.teams[1][.serveLeft], StatisticCount())
+    }
+
+    func testGoldenAndStarExcludeOnlyThePlayedDecidingRallyFromSides() {
+        for (rule, rounds) in [(DeuceRule.golden, 3), (.star, 5)] {
+            let winners = Array(repeating: [0, 1], count: rounds).flatMap { $0 } + [1]
+            let page = calculate([[game(winners, winner: 1)]], rule: rule)[0]
+            XCTAssertEqual(page.teams[0][.serve], StatisticCount(won: rounds, total: rounds * 2 + 1))
+            XCTAssertEqual(page.teams[0][.serveRight], StatisticCount(won: rounds, total: rounds))
+            XCTAssertEqual(page.teams[0][.serveLeft], StatisticCount(won: 0, total: rounds))
+            XCTAssertEqual(page.teams[1][.breakPoints], StatisticCount(won: 1, total: 1))
+            XCTAssertEqual(page.teams[1][.deuceGames], StatisticCount(won: 1, total: 1))
+        }
+    }
+
+    func testSavedGoldenDecidingPointIsStillABreakOpportunity() {
+        let page = calculate([[game([0, 1, 0, 1, 0, 1, 0], winner: 0)]], rule: .golden)[0]
+        XCTAssertEqual(page.teams[1][.breakPoints], StatisticCount(won: 0, total: 1))
+        XCTAssertEqual(page.teams[0][.serve], StatisticCount(won: 4, total: 7))
+        XCTAssertEqual(page.teams[0][.serveRight], StatisticCount(won: 3, total: 3))
+    }
+
+    func testAdvantageDeuceHasNoSideExclusionsAndGameCountsOnlyOnce() {
+        let rallies = Array(repeating: [0, 1], count: 5).flatMap { $0 } + [1, 1]
+        let page = calculate([[game(rallies, winner: 1)]])[0]
+        XCTAssertEqual(page.teams[0][.serve], StatisticCount(won: 5, total: 12))
+        XCTAssertEqual(page.teams[0][.serveRight], StatisticCount(won: 5, total: 6))
+        XCTAssertEqual(page.teams[0][.serveLeft], StatisticCount(won: 0, total: 6))
+        XCTAssertEqual(page.teams[0][.deuceGames], StatisticCount(won: 0, total: 1))
+        XCTAssertEqual(page.teams[1][.deuceGames], StatisticCount(won: 1, total: 1))
+        XCTAssertEqual(page.teams[1][.breakPoints], StatisticCount(won: 1, total: 1))
+    }
+
+    func testBreakOpportunitiesCountOnlyRalliesActuallyPlayed() {
+        XCTAssertEqual(calculate([[game([1, 1, 1])]])[0].teams[1][.breakPoints], StatisticCount())
+        let page = calculate([[game([1, 1, 1, 0, 0, 1], winner: 1)]])[0]
+        XCTAssertEqual(page.teams[1][.breakPoints], StatisticCount(won: 1, total: 3))
+        XCTAssertEqual(page.teams[0][.breakPoints], StatisticCount())
+        XCTAssertEqual(page.teams[1][.deuceGames], StatisticCount())
+    }
+
+    func testUnfinishedDeuceGameIsExcludedUntilCompletion() {
+        let page = calculate([[game([0, 1, 0, 1, 0, 1])]])[0]
+        XCTAssertEqual(page.teams[0][.deuceGames], StatisticCount())
+        XCTAssertEqual(page.teams[1][.deuceGames], StatisticCount())
+    }
+
+    func testTiebreakServiceParityIsGlobalAndMiniBreaksBelongToReceiver() {
+        let servers = [0, 1, 1, 0, 0, 1, 1]
+        let winners = [1, 0, 1, 1, 0, 1, 0]
+        let tie = StatisticsInput.Game(isTieBreak: true, winningTeam: nil,
+            points: zip(servers, winners).map { .init(server: $0.0, winningTeam: $0.1) })
+        let page = calculate([[tie]], rule: .golden)[0]
+        XCTAssertEqual(page.teams[0][.serve], StatisticCount(won: 1, total: 3))
+        XCTAssertEqual(page.teams[0][.serveRight], StatisticCount(won: 1, total: 2))
+        XCTAssertEqual(page.teams[0][.serveLeft], StatisticCount(won: 0, total: 1))
+        XCTAssertEqual(page.teams[1][.serveRight], StatisticCount(won: 1, total: 2))
+        XCTAssertEqual(page.teams[1][.serveLeft], StatisticCount(won: 1, total: 2))
+        XCTAssertEqual(page.teams[0][.miniBreaks], StatisticCount(won: 2, total: 4))
+        XCTAssertEqual(page.teams[1][.miniBreaks], StatisticCount(won: 2, total: 3))
+        for team in page.teams {
+            XCTAssertEqual(team[.breakPoints], StatisticCount())
+            XCTAssertEqual(team[.deuceGames], StatisticCount())
+        }
+    }
+
+    func testMatchTotalsSumSetsInsteadOfAveragingPercentagesAndSinglesMatchPlayer() {
+        let pages = calculate([[game([0, 0, 0, 0], winner: 0)], [game([1, 1])]])
+        XCTAssertEqual(pages.map(\.id), [0, 1, 2])
+        XCTAssertEqual(pages[0].teams[0][.serve], StatisticCount(won: 4, total: 6))
+        XCTAssertEqual(pages[1].teams[0][.serve], StatisticCount(won: 4, total: 4))
+        XCTAssertEqual(pages[2].teams[0][.serve], StatisticCount(won: 0, total: 2))
+        for page in pages {
+            for player in page.players { XCTAssertEqual(player.counts, page.teams[player.team].counts) }
+        }
+    }
+
+    func testHighlightsUseExactRatiosAndCompareBreakCountsIndependently() {
+        let first = StatisticCount(won: 2, total: 3), second = StatisticCount(won: 1, total: 5)
+        XCTAssertEqual(MatchStatistic.breakPoints.highlightedColumns(for: first, comparedTo: second), [.won])
+        XCTAssertEqual(MatchStatistic.breakPoints.highlightedColumns(for: second, comparedTo: first), [.total])
+        for metric in MatchStatistic.allCases where metric != .breakPoints {
+            XCTAssertEqual(metric.highlightedColumns(for: first, comparedTo: second), [.percentage])
+            XCTAssertEqual(metric.highlightedColumns(for: first, comparedTo: StatisticCount(won: 4, total: 6)), [])
+            XCTAssertEqual(metric.highlightedColumns(for: first, comparedTo: StatisticCount()), [])
+            XCTAssertEqual(metric.highlightedColumns(for: first, comparedTo: nil), [])
+        }
+        // Both round to 50%, but comparison uses the original fractions.
+        XCTAssertTrue(StatisticCount(won: 501, total: 1000).hasBetterPercentage(than: .init(won: 1, total: 2)))
+        XCTAssertEqual(MatchStatistic.breakPoints.highlightedColumns(for: first, comparedTo: first), [])
+    }
+
+    @MainActor func testStatisticsRefreshAfterScoringUndoAndFailedSave() throws {
+        let h = try Harness(), match = try h.create(golden: true)
+        let history = ScoreHistoryViewModel(matchService: h.service)
+        for team in [0, 1, 0, 1, 0, 1] {
+            if team == 0 { h.service.pointWonByTeam1() } else { h.service.pointWonByTeam2() }
+        }
+        XCTAssertEqual(history.statistics[0].teams[0][.deuceGames], StatisticCount())
+        h.context.failSave = true
+        h.service.pointWonByTeam2()
+        XCTAssertEqual(history.statistics[0].teams[0][.serve].total, 6)
+        h.context.failSave = false
+        h.service.pointWonByTeam2()
+        XCTAssertTrue(history.sections[0].games[0].isBreak)
+        XCTAssertEqual(history.statistics[0].teams[1][.breakPoints], StatisticCount(won: 1, total: 1))
+        XCTAssertEqual(history.statistics[0].teams[1][.deuceGames], StatisticCount(won: 1, total: 1))
+        h.service.undoLastPoint()
+        XCTAssertEqual(history.statistics[0].teams[0][.serve].total, 6)
+        XCTAssertEqual(history.statistics[0].teams[1][.deuceGames], StatisticCount())
+        XCTAssertEqual(history.statistics[0].teams[1][.breakPoints], StatisticCount())
+        let saves = h.context.saveCount
+        _ = MatchStatisticsCalculator.pages(for: match, rules: h.repository.rules(for: match))
+        XCTAssertEqual(h.context.saveCount, saves)
+        XCTAssertFalse(h.context.hasChanges)
+    }
+
+    @MainActor func testSuperTiebreakIsIncludedAndUndoRemovesSetStatistics() throws {
+        let h = try Harness(), match = try h.create(bestOf: 3, superTieBreak: true)
+        try h.winSet(match, team: 0); try h.winSet(match, team: 1)
+        h.service.match = match
+        let history = ScoreHistoryViewModel(matchService: h.service)
+        h.service.pointWonByTeam2()
+        XCTAssertEqual(history.statistics.map(\.id), [0, 1, 2, 3])
+        XCTAssertEqual(history.statistics[3].teams[1][.miniBreaks], StatisticCount(won: 1, total: 1))
+        XCTAssertEqual(history.statistics[3].teams[0][.serveRight], StatisticCount(won: 0, total: 1))
+        XCTAssertEqual(history.statistics[3].teams[1][.breakPoints], StatisticCount())
+        h.service.undoLastPoint()
+        h.service.undoLastPoint()
+        XCTAssertEqual(history.statistics.map(\.id), [0, 1, 2])
+        XCTAssertEqual(history.statistics[0].teams[1][.miniBreaks], StatisticCount())
+    }
 }

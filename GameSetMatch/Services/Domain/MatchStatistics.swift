@@ -14,8 +14,20 @@ enum MatchStatistic: String, CaseIterable, Identifiable {
         case .miniBreaks: return String(localized: "Mini-breaks")
         }
     }
+    func highlightedColumns(for count: StatisticCount, comparedTo other: StatisticCount?) -> Set<StatisticColumn> {
+        guard let other else { return [] }
+        if self == .breakPoints {
+            var columns: Set<StatisticColumn> = []
+            if count.won > other.won { columns.insert(.won) }
+            if count.total > other.total { columns.insert(.total) }
+            return columns
+        }
+        return count.hasBetterPercentage(than: other) ? [.percentage] : []
+    }
     static let personal: [Self] = [.serve, .serveRight, .serveLeft]
 }
+
+enum StatisticColumn { case won, total, percentage }
 
 struct StatisticCount: Equatable {
     var won = 0
